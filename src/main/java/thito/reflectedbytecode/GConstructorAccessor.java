@@ -28,7 +28,7 @@ public class GConstructorAccessor extends BodyAccessor {
     public void constructDefault() {
         IClass clazz = getSuperClass();
         clazz.getConstructor().ifPresent(constructor -> {
-            constructor.invoke();
+            ((AbstractConstructor) constructor).invoke();
         });
     }
 

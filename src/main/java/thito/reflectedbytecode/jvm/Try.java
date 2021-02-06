@@ -12,16 +12,13 @@ public class Try {
     private Runnable mainBody;
     private Map<IClass, Body<BodyAccessor>> catchBodyMap = new HashMap<>();
 
-    public static void a() {
-        try {
-            System.out.println("x");
-        } catch (Throwable t) {
-            System.out.println("y");
-        }
-    }
-
     public Catch Catch(Type... throwables) {
         return new Catch(this, throwables);
+    }
+
+    public Try Finally(Runnable body) {
+
+        return this;
     }
 
 }

@@ -100,8 +100,7 @@ public class GConstructor extends AbstractConstructor implements GMember {
         return parameters == null ? 0 : parameters.length;
     }
 
-    @Override
-    public void invoke(Object... args) {
+    void invoke(Object... args) {
         Code code = Code.getCode();
         MethodVisitor visitor = code.getCodeVisitor();
         visitor.visitVarInsn(Opcodes.ALOAD, 0);

@@ -23,77 +23,77 @@ public interface Java {
     }
 
     interface Math {
-        default Reference toInt(Object a) {
+        static Reference toInt(Object a) {
             return () -> {
                 Reference.handleWrite(a);
                 Code.getCode().getCodeVisitor().visitInsn(Opcodes.D2I);
             };
         }
-        default Reference toDouble(Object a) {
+        static Reference toDouble(Object a) {
             return () -> {
                 Reference.handleWrite(a);
                 Code.getCode().getCodeVisitor().visitInsn(Opcodes.I2D);
             };
         }
-        default Reference toFloat(Object a) {
+        static Reference toFloat(Object a) {
             return () -> {
                 Reference.handleWrite(a);
                 Code.getCode().getCodeVisitor().visitInsn(Opcodes.I2F);
             };
         }
-        default Reference toByte(Object a) {
+        static Reference toByte(Object a) {
             return () -> {
                 Reference.handleWrite(a);
                 Code.getCode().getCodeVisitor().visitInsn(Opcodes.I2B);
             };
         }
-        default Reference toLong(Object a) {
+        static Reference toLong(Object a) {
             return () -> {
                 Reference.handleWrite(a);
                 Code.getCode().getCodeVisitor().visitInsn(Opcodes.I2L);
             };
         }
-        default Reference toShort(Object a) {
+        static Reference toShort(Object a) {
             return () -> {
                 Reference.handleWrite(a);
                 Code.getCode().getCodeVisitor().visitInsn(Opcodes.I2S);
             };
         }
-        default Reference toChar(Object a) {
+        static Reference toChar(Object a) {
             return () -> {
                 Reference.handleWrite(a);
                 Code.getCode().getCodeVisitor().visitInsn(Opcodes.I2C);
             };
         }
-        default Reference add(Object a, Object b) {
+        static Reference add(Object a, Object b) {
             return () -> {
                 Reference.handleWrite(a);
                 Reference.handleWrite(b);
                 Code.getCode().getCodeVisitor().visitInsn(Opcodes.IADD);
             };
         }
-        default Reference multiply(Object a, Object b) {
+        static Reference multiply(Object a, Object b) {
             return () -> {
                 Reference.handleWrite(a);
                 Reference.handleWrite(b);
                 Code.getCode().getCodeVisitor().visitInsn(Opcodes.IMUL);
             };
         }
-        default Reference divide(Object a, Object b) {
+        static Reference divide(Object a, Object b) {
             return () -> {
                 Reference.handleWrite(a);
                 Reference.handleWrite(b);
                 Code.getCode().getCodeVisitor().visitInsn(Opcodes.IDIV);
             };
         }
-        default Reference subtract(Object a, Object b) {
+        static Reference subtract(Object a, Object b) {
             return () -> {
                 Reference.handleWrite(a);
                 Reference.handleWrite(b);
                 Code.getCode().getCodeVisitor().visitInsn(Opcodes.ISUB);
             };
         }
-        default Reference mod(Object a, Object b) {
+        static Reference mod(Object a, Object b) {
             return () -> {
                 Reference.handleWrite(a);
                 Reference.handleWrite(b);
@@ -147,18 +147,18 @@ public interface Java {
             }
         };
     }
-    static void SetArrayElement(Reference array, int index, Object value) {
+    static void SetArrayElement(Reference array, Object index, Object value) {
         Reference.handleWrite(array);
+        Reference.handleWrite(index);
         MethodVisitor visitor = Code.getCode().getCodeVisitor();
-        visitor.visitLdcInsn(index);
         Reference.handleWrite(value);
         visitor.visitInsn(Opcodes.AASTORE);
     }
-    static Reference GetArrayElement(Reference array, int index) {
+    static Reference GetArrayElement(Reference array, Object index) {
         return () -> {
             Reference.handleWrite(array);
+            Reference.handleWrite(index);
             MethodVisitor visitor = Code.getCode().getCodeVisitor();
-            visitor.visitLdcInsn(index);
             visitor.visitInsn(Opcodes.AALOAD);
         };
     }

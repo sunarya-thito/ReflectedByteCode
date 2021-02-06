@@ -2,7 +2,7 @@ package thito.reflectedbytecode;
 
 import org.objectweb.asm.Opcodes;
 
-public abstract class BodyAccessor implements ArrayReference {
+public abstract class BodyAccessor implements Reference {
 
     protected abstract boolean hasInstance();
 

@@ -109,7 +109,7 @@ public class Context implements AutoCloseable {
                         Arrays.stream(constructor.getThrows()).map(TypeHelper::getInternalName).toArray(String[]::new)));
                 try (Code code = Code.pushCode(Modifier.PUBLIC, defaultConstructorVisitor)) {
                     code.skipLocalIndex(0); // necessary? i don't think so
-                    constructor.invoke();
+                    ((AbstractConstructor) constructor).invoke();
                     defaultConstructorVisitor.visitInsn(Opcodes.RETURN);
                 }
             } else {

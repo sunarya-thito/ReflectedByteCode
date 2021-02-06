@@ -25,6 +25,7 @@ public class GClass extends AbstractClass implements GMember {
     private IClass superclass, declaringClass;
     private IClass[] interfaces = new IClass[0];
     private Map<Type, GAnnotation<GClass>> annotationMap = new HashMap<>();
+    private Body<BodyAccessor> staticInitializer;
     private Package pack;
     GClass(Context context, IClass declaring, String name) {
         this.declaringClass = declaring;
@@ -57,8 +58,8 @@ public class GClass extends AbstractClass implements GMember {
         return method;
     }
 
-    public GField declareField(String name, IClass type) {
-        GField field = new GField(this, name, type);
+    public GField declareField(String name, Type type) {
+        GField field = new GField(this, name, IClass.fromClass(type));
         declaredFields.add(field);
         return field;
     }

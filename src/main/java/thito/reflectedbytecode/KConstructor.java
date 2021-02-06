@@ -22,8 +22,7 @@ public class KConstructor extends AbstractConstructor implements IConstructor {
                 parameterTypes;
     }
 
-    @Override
-    public void invoke(Object... args) {
+    void invoke(Object... args) {
         Code code = Code.getCode();
         MethodVisitor visitor = code.getCodeVisitor();
         visitor.visitVarInsn(Opcodes.ALOAD, 0);

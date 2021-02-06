@@ -14,6 +14,8 @@ public abstract class AbstractConstructor implements IConstructor {
         return builder.toString();
     }
 
+    abstract void invoke(Object...args);
+
     public <T extends Reference> T newInstance(Object... args) {
         return (T) (ArrayReference) () -> {
             Code code = Code.getCode();
