@@ -1,10 +1,6 @@
-import thito.reflectedbytecode.Context;
-import thito.reflectedbytecode.GClass;
-import thito.reflectedbytecode.IClass;
+import thito.reflectedbytecode.*;
 
-import java.io.File;
-import java.io.PrintStream;
-import java.nio.file.Files;
+import java.io.*;
 
 import static thito.reflectedbytecode.jvm.Java.*;
 
@@ -13,7 +9,7 @@ public class APIDesignTest {
     public static void main(String[] args) throws Throwable {
         try (Context context = Context.open()) {
 
-            GClass exampleClass = context.createClass("Example");
+            GClass exampleClass = context.createClass("test.Example");
 
             exampleClass.declareMethod("main").modifier().makeStatic().done().parameters(String[].class).body(instance -> {
 
@@ -34,19 +30,10 @@ public class APIDesignTest {
             }).exceptionThrows(Throwable.class).annotate(Deprecated.class);
 
             ClassLoader loader = context.loadIntoMemory();
-            Class<?> ex = Class.forName("Example", true, loader);
+            Class<?> ex = Class.forName("test.Example", true, loader);
             ex.getMethod("main", String[].class).invoke(null, new Object[] {new String[15]});
+
         }
-    }
-
-    //            Files.write(new File("Example.class").toPath(), context.writeClass(exampleClass));
-
-    public @interface C {
-        A value();
-    }
-
-    public enum A {
-        B, C;
     }
 
 }
