@@ -1,7 +1,6 @@
 package thito.reflectedbytecode;
 
-import jdk.internal.org.objectweb.asm.Opcodes;
-import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.*;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Type;

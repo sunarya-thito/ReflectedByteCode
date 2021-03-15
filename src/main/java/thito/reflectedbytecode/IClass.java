@@ -30,16 +30,16 @@ public interface IClass extends IMember, Type {
         }
         return null;
     }
-    Optional<IConstructor> getDeclaredConstructor(Type... parameterTypes);
-    Optional<IConstructor> getConstructor(Type... parameterTypes);
+    Optional<? extends IConstructor> getDeclaredConstructor(Type... parameterTypes);
+    Optional<? extends IConstructor> getConstructor(Type... parameterTypes);
     IConstructor[] getDeclaredConstructors();
     IConstructor[] getConstructors();
-    Optional<IMethod> getDeclaredMethod(String name, Type... parameterTypes);
-    Optional<IMethod> getMethod(String name, Type... parameterTypes);
+    Optional<? extends IMethod> getDeclaredMethod(String name, Type... parameterTypes);
+    Optional<? extends IMethod> getMethod(String name, Type... parameterTypes);
     IMethod[] getDeclaredMethods();
     IMethod[] getMethods();
-    Optional<IField> getDeclaredField(String name);
-    Optional<IField> getField(String name);
+    Optional<? extends IField> getDeclaredField(String name);
+    Optional<? extends IField> getField(String name);
     IField[] getDeclaredFields();
     IField[] getFields();
     IClass[] getClasses();

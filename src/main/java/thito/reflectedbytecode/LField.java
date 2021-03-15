@@ -1,6 +1,7 @@
 package thito.reflectedbytecode;
 
-import jdk.internal.org.objectweb.asm.Opcodes;
+
+import org.objectweb.asm.*;
 
 public class LField implements ILocalField, GMember {
 

@@ -21,6 +21,10 @@ public class Package implements IPackage {
                 null);
     }
 
+    public Package(String name) {
+        this(name, null, null, null, null, null, null, null);
+    }
+
     public Package(String name, String specTitle, String specVersion, String specVendor, String implTitle, String implVersion, String implVendor, URL sealBase) {
         this.name = name;
         this.specTitle = specTitle;

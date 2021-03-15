@@ -1,6 +1,5 @@
 package thito.reflectedbytecode;
 
-import jdk.internal.org.objectweb.asm.util.CheckClassAdapter;
 import org.objectweb.asm.*;
 import thito.reflectedbytecode.jvm.Java;
 import thito.reflectedbytecode.jvm.JavaValidatorHelper;
@@ -143,7 +142,7 @@ public class Context implements AutoCloseable {
                 }
             }
         }
-        CheckClassAdapter.verify(new jdk.internal.org.objectweb.asm.ClassReader(writer.toByteArray()), true, new PrintWriter(System.out));
+//        CheckClassAdapter.verify(new jdk.internal.org.objectweb.asm.ClassReader(writer.toByteArray()), true, new PrintWriter(System.out));
 
         return writer.toByteArray();
     }

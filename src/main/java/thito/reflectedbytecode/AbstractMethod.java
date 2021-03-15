@@ -26,7 +26,7 @@ public abstract class AbstractMethod implements IMethod {
         Code code = Code.getCode();
         boolean isVoid = getReturnType() == null || getReturnType().getDescriptor().equals("V");
         int localIndex = isVoid ? 0 : code.requestLocalIndex();
-        if (!Modifier.isStatic(getModifiers())) {
+        if (instance != null && !Modifier.isStatic(getModifiers())) {
             Reference.handleWrite(instance);
         }
         for (Object arg : args) {
@@ -36,7 +36,7 @@ public abstract class AbstractMethod implements IMethod {
         int operation;
         if (Modifier.isPrivate(getModifiers())) {
             operation = Opcodes.INVOKESPECIAL;
-        } else if (Modifier.isStatic(getModifiers())) {
+        } else if (instance == null || Modifier.isStatic(getModifiers())) {
             operation = Opcodes.INVOKESTATIC;
         } else {
             if (Modifier.isInterface(getDeclaringClass().getModifiers())) {

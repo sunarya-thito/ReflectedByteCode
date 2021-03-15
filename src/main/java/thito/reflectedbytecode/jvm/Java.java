@@ -3,15 +3,30 @@ package thito.reflectedbytecode.jvm;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
-import thito.reflectedbytecode.ArrayReference;
-import thito.reflectedbytecode.Code;
-import thito.reflectedbytecode.Reference;
-import thito.reflectedbytecode.TypeHelper;
+import thito.reflectedbytecode.*;
 
 import java.lang.reflect.Type;
 import java.util.function.Consumer;
 
 public interface Java {
+
+    static IClass Class(Type clazz) {
+        return IClass.fromClass(clazz);
+    }
+
+    static IClass Class(String name) {
+        try {
+            return IClass.fromClass(Class.forName(name));
+        } catch (Throwable t) {
+            IClass x = IClass.findClass(name);
+            if (x == null) x = UClass.Class(name);
+            return x;
+        }
+    }
+
+    static UClass UClass(String name) {
+        return UClass.Class(name);
+    }
 
     // INNER CLASSES
     interface Enum {
@@ -19,6 +34,36 @@ public interface Java {
         interface Constant {
             String name();
             Type getType();
+        }
+    }
+
+    interface Logic {
+        static Reference And(Object condition1, Object condition2) {
+            return () -> {
+                Reference.handleWrite(condition1);
+                Reference.handleWrite(condition2);
+                Code.getCode().getCodeVisitor().visitInsn(Opcodes.IAND);
+            };
+        }
+        static Reference Or(Object condition1, Object condition2) {
+            return () -> {
+                Reference.handleWrite(condition1);
+                Reference.handleWrite(condition2);
+                Code.getCode().getCodeVisitor().visitInsn(Opcodes.IOR);
+            };
+        }
+        static Reference XOr(Object condition1, Object condition2) {
+            return () -> {
+                Reference.handleWrite(condition1);
+                Reference.handleWrite(condition2);
+                Code.getCode().getCodeVisitor().visitInsn(Opcodes.IXOR);
+            };
+        }
+        static Reference Negate(Object condition) {
+            return () -> {
+                Reference.handleWrite(condition);
+                Code.getCode().getCodeVisitor().visitInsn(Opcodes.INEG);
+            };
         }
     }
 
@@ -100,6 +145,27 @@ public interface Java {
                 Code.getCode().getCodeVisitor().visitInsn(Opcodes.IREM);
             };
         }
+        static Reference shl(Object a, Object b) {
+            return () -> {
+                Reference.handleWrite(a);
+                Reference.handleWrite(b);
+                Code.getCode().getCodeVisitor().visitInsn(Opcodes.ISHL);
+            };
+        }
+        static Reference shr(Object a, Object b) {
+            return () -> {
+                Reference.handleWrite(a);
+                Reference.handleWrite(b);
+                Code.getCode().getCodeVisitor().visitInsn(Opcodes.ISHR);
+            };
+        }
+        static Reference uShr(Object a, Object b) {
+            return () -> {
+                Reference.handleWrite(a);
+                Reference.handleWrite(b);
+                Code.getCode().getCodeVisitor().visitInsn(Opcodes.IUSHR);
+            };
+        }
     }
 
     // METHODS
@@ -175,8 +241,11 @@ public interface Java {
             Code.getCode().getCodeVisitor().visitInsn(Opcodes.ARRAYLENGTH);
         };
     }
-    static Reference InstanceOf(Reference value) {
-        return null;
+    static Reference InstanceOf(Object value, Type type) {
+        return () -> {
+            Reference.handleWrite(value);
+            Code.getCode().getCodeVisitor().visitTypeInsn(Opcodes.INSTANCEOF, type.getTypeName().replace('.', '/'));
+        };
     }
     static void Label(String label) {
         Code code = Code.getCode();
@@ -194,5 +263,8 @@ public interface Java {
         body.accept(new While(endPoint, loopPoint));
         visitor.visitJumpInsn(Opcodes.GOTO, loopPoint);
         visitor.visitLabel(endPoint);
+    }
+    static void Throw(Object reference) {
+        MethodVisitor visitor = Code.getCode().getCodeVisitor();
     }
 }

@@ -25,12 +25,12 @@ public abstract class AbstractField implements IField {
     public <T extends Reference> T get(Object instance) {
         return (T) (ArrayReference) () -> {
             Code code = Code.getCode();
-            if (!Modifier.isStatic(getModifiers())) {
+            if (instance != null && !Modifier.isStatic(getModifiers())) {
                 Reference.handleWrite(instance);
             }
             MethodVisitor visitor = code.getCodeVisitor();
             visitor.visitFieldInsn(
-                    Modifier.isStatic(getModifiers()) ? Opcodes.GETSTATIC : Opcodes.GETFIELD,
+                    instance == null || Modifier.isStatic(getModifiers()) ? Opcodes.GETSTATIC : Opcodes.GETFIELD,
                     getDeclaringClass().getRawName(),
                     getName(),
                     getType().getDescriptor()

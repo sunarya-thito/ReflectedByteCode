@@ -1,8 +1,6 @@
 package thito.reflectedbytecode.jvm;
 
-import jdk.internal.org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Label;
-import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.*;
 import thito.reflectedbytecode.Code;
 
 public class Condition {

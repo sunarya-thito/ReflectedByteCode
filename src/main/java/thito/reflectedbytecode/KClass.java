@@ -1,6 +1,6 @@
 package thito.reflectedbytecode;
 
-import jdk.internal.org.objectweb.asm.Type;
+import org.objectweb.asm.*;
 
 import java.util.Arrays;
 import java.util.WeakHashMap;
