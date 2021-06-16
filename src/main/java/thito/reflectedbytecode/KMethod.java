@@ -49,4 +49,11 @@ public class KMethod extends AbstractMethod implements IMethod {
     public Type[] getThrows() {
         return method.getExceptionTypes();
     }
+
+    @Override
+    public String toString() {
+        return "KMethod{" +
+                "method=" + method +
+                '}';
+    }
 }

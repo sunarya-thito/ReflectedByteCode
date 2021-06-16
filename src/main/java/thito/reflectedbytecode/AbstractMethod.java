@@ -22,15 +22,20 @@ public abstract class AbstractMethod implements IMethod {
         return builder.toString();
     }
 
-    public <T extends Reference> T invoke(Object instance, Object... args) {
-        Code code = Code.getCode();
-        boolean isVoid = getReturnType() == null || getReturnType().getDescriptor().equals("V");
-        int localIndex = isVoid ? 0 : code.requestLocalIndex();
+    @Override
+    public void invokeVoid(Object instance, Object... args) {
+        if (getParameterCount() != args.length) throw new IllegalArgumentException("invalid argument length expected "+getParameterCount()+" but found "+args.length);
         if (instance != null && !Modifier.isStatic(getModifiers())) {
-            Reference.handleWrite(instance);
+            Reference.handleWrite(getDeclaringClass(), instance);
         }
-        for (Object arg : args) {
-            Reference.handleWrite(arg);
+        Code code = Code.getCode();
+        IClass[] parameterTypes = getParameterTypes();
+        for (int i = 0; i < parameterTypes.length; i++) {
+            try {
+                Reference.handleWrite(parameterTypes[i], args[i]);
+            } catch (Throwable t) {
+                throw new IllegalArgumentException("Invalid argument: "+i+" ("+getDeclaringClass().getName()+"#"+getName()+")", t);
+            }
         }
         MethodVisitor visitor = code.getCodeVisitor();
         int operation;
@@ -51,12 +56,52 @@ public abstract class AbstractMethod implements IMethod {
                 getName(),
                 getMethodDescriptor(),
                 operation == Opcodes.INVOKEINTERFACE);
-        if (!isVoid) {
-            visitor.visitVarInsn(Opcodes.ASTORE, localIndex);
+        if (getReturnType() != null && !getReturnType().getDescriptor().equals("V")) {
+            visitor.visitInsn(Opcodes.POP);
         }
-        return isVoid ? null : (T) (ArrayReference) () -> {
-            Code code2 = Code.getCode();
-            code2.getCodeVisitor().visitVarInsn(Opcodes.ALOAD, localIndex);
+    }
+
+    public Reference invoke(Object instance, Object... args) {
+        if (getParameterCount() != args.length) throw new IllegalArgumentException("invalid argument length expected "+getParameterCount()+" but found "+args.length);
+        if (getReturnType() == null || getReturnType().getDescriptor().equals("V")) {
+            invokeVoid(instance, args);
+            return null;
+        }
+        return new Reference(getReturnType()) {
+            @Override
+            protected void write() {
+                Code code = Code.getCode();
+                if (instance != null && !Modifier.isStatic(getModifiers())) {
+                    Reference.handleWrite(getDeclaringClass(), instance);
+                }
+                IClass[] parameterTypes = getParameterTypes();
+                for (int i = 0; i < parameterTypes.length; i++) {
+                    try {
+                        Reference.handleWrite(parameterTypes[i], args[i]);
+                    } catch (Throwable t) {
+                        throw new IllegalArgumentException("Invalid argument: "+i+" ("+getDeclaringClass().getName()+"#"+getName()+")", t);
+                    }
+                }
+                MethodVisitor visitor = code.getCodeVisitor();
+                int operation;
+                if (Modifier.isPrivate(getModifiers())) {
+                    operation = Opcodes.INVOKESPECIAL;
+                } else if (instance == null || Modifier.isStatic(getModifiers())) {
+                    operation = Opcodes.INVOKESTATIC;
+                } else {
+                    if (Modifier.isInterface(getDeclaringClass().getModifiers())) {
+                        operation = Opcodes.INVOKEINTERFACE;
+                    } else {
+                        operation = Opcodes.INVOKEVIRTUAL;
+                    }
+                }
+                visitor.visitMethodInsn(
+                        operation,
+                        getDeclaringClass().getRawName(),
+                        getName(),
+                        getMethodDescriptor(),
+                        operation == Opcodes.INVOKEINTERFACE);
+            }
         };
     }
 

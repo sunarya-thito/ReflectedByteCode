@@ -1,6 +1,8 @@
 package thito.reflectedbytecode;
 
-import java.lang.reflect.Modifier;
+import org.objectweb.asm.*;
+
+import java.lang.reflect.*;
 import java.lang.reflect.Type;
 import java.util.Optional;
 
@@ -15,7 +17,12 @@ public interface IClass extends IMember, Type {
             KClass.cache.put((Class<?>) type, kClass);
             return kClass;
         }
-        throw new UnsupportedOperationException("unknown type");
+        if (type instanceof ParameterizedType) {
+            GenericClass parameterizedClass = new GenericClass((ParameterizedType) type);
+            return parameterizedClass;
+        }
+        return fromClass(Object.class);
+//        throw new UnsupportedOperationException("unknown type");
     }
     static IClass findClass(String name) {
         GClass generatedClass = Context.getContext().getClass(name);
@@ -28,7 +35,12 @@ public interface IClass extends IMember, Type {
             return fromClass(runtimeClass);
         } catch (Throwable t) {
         }
-        return null;
+        try {
+            Class<?> runtimeClass = Class.forName(name, false, Thread.currentThread().getContextClassLoader());
+            return fromClass(runtimeClass);
+        } catch (Throwable t) {
+        }
+        return new UClass(name);
     }
     Optional<? extends IConstructor> getDeclaredConstructor(Type... parameterTypes);
     Optional<? extends IConstructor> getConstructor(Type... parameterTypes);
@@ -52,6 +64,40 @@ public interface IClass extends IMember, Type {
     boolean isArray();
     default boolean isInterface() {
         return Modifier.isInterface(getModifiers());
+    }
+    default Reference newInstance() {
+        int constructors = getConstructors().length;
+        Optional<? extends IConstructor> constructor = getConstructor();
+        if (constructor.isPresent()) {
+            return constructor.get().newInstance();
+        } else {
+            return new Reference(this) {
+                @Override
+                protected void write() {
+                    MethodVisitor visitor = Code.getCode().getCodeVisitor();
+                    visitor.visitTypeInsn(Opcodes.NEW, getRawName());
+                    visitor.visitInsn(Opcodes.DUP);
+                    visitor.visitMethodInsn(Opcodes.INVOKESPECIAL, getRawName(), "<init>", "()V", false);
+                }
+            };
+        }
+    }
+
+    default Reference staticField(String name) {
+        return getField(name).get().get(null);
+    }
+    default Reference.MethodInvocation staticMethod(String name, Type... types) {
+        return new Reference.MethodInvocation() {
+            @Override
+            public Reference invoke(Object... args) {
+                return getMethod(name, types).get().invoke(null, args);
+            }
+
+            @Override
+            public void invokeVoid(Object... args) {
+                getMethod(name, types).get().invokeVoid(null, args);
+            }
+        };
     }
 
     // NATIVE IMPLEMENTATION

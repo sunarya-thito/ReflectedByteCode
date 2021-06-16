@@ -9,13 +9,17 @@ public class GField extends AbstractField implements GMember {
     private IClass type;
     private String name;
     private GClass declaringClass;
-    private int modifiers = Modifier.PRIVATE;
+    private int modifiers = 0;
     private Object constantValue;
     private Map<Type, GAnnotation<GField>> annotationMap = new HashMap<>();
 
     GField(GClass declaringClass, String name, IClass type) {
         this.declaringClass = declaringClass;
         this.name = name;
+        this.type = type;
+    }
+
+    public void setType(IClass type) {
         this.type = type;
     }
 

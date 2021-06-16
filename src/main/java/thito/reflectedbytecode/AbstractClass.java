@@ -11,7 +11,7 @@ public abstract class AbstractClass implements IClass {
             IClass[] params = element.getParameterTypes();
             if (params.length != parameterTypes.length) return false;
             for (int i = 0; i < params.length; i++) {
-                if (!parameterTypes[i].getTypeName().equals(params[i].getName())) {
+                if (!parameterTypes[i].getTypeName().equals(params[i].getTypeName())) {
                     return false;
                 }
             }
@@ -25,7 +25,7 @@ public abstract class AbstractClass implements IClass {
             IClass[] params = element.getParameterTypes();
             if (params.length != parameterTypes.length) return false;
             for (int i = 0; i < params.length; i++) {
-                if (!parameterTypes[i].getTypeName().equals(params[i].getName())) {
+                if (!parameterTypes[i].getTypeName().equals(params[i].getTypeName())) {
                     return false;
                 }
             }
@@ -40,7 +40,7 @@ public abstract class AbstractClass implements IClass {
             IClass[] params = element.getParameterTypes();
             if (params.length != parameterTypes.length) return false;
             for (int i = 0; i < params.length; i++) {
-                if (!parameterTypes[i].getTypeName().equals(params[i].getName())) {
+                if (!parameterTypes[i].getTypeName().equals(params[i].getTypeName())) {
                     return false;
                 }
             }
@@ -55,7 +55,7 @@ public abstract class AbstractClass implements IClass {
             IClass[] params = element.getParameterTypes();
             if (params.length != parameterTypes.length) return false;
             for (int i = 0; i < params.length; i++) {
-                if (!parameterTypes[i].getTypeName().equals(params[i].getName())) {
+                if (!parameterTypes[i].getTypeName().equals(params[i].getTypeName())) {
                     return false;
                 }
             }

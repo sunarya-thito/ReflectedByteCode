@@ -1,11 +1,14 @@
 package thito.reflectedbytecode;
 
-import java.lang.reflect.Modifier;
+import org.objectweb.asm.*;
 
-public class GMethodAccessor extends BodyAccessor {
+import java.lang.reflect.*;
+
+public class GMethodAccessor extends MemberBodyAccessor {
     private GMethod method;
 
     public GMethodAccessor(GMethod method) {
+        super(method, method.getDeclaringClass());
         this.method = method;
     }
 
@@ -13,20 +16,25 @@ public class GMethodAccessor extends BodyAccessor {
         return method.getDeclaringClass().getSuperClass();
     }
 
-    public LField createVariable() {
-        return method.createLocalField();
-    }
-
-    public PField getParameter(int index) {
-        return method.getArgument(index);
-    }
-
-    public <T extends Reference> T getArgument(int index) {
-        return getParameter(index).get();
+    @Override
+    public void write() {
+        if (Modifier.isStatic(method.getModifiers())) {
+            throw new UnsupportedOperationException("static");
+        }
+        Code.getCode().getCodeVisitor().visitVarInsn(Opcodes.ALOAD, 0);
     }
 
     @Override
-    protected boolean hasInstance() {
-        return !Modifier.isStatic(method.getModifiers());
+    public void doneReturn() {
+        Code code = Code.getCode();
+        code.markReturn();
+        code.getCodeVisitor().visitInsn(Opcodes.RETURN);
+    }
+
+    public void doneReturn(Object value) {
+        Code code = Code.getCode();
+        code.markReturn();
+        Reference.handleWrite(method.getDeclaringClass(), value);
+        code.getCodeVisitor().visitInsn(ASMHelper.ToASMType(method.getReturnType()).getOpcode(Opcodes.IRETURN));
     }
 }

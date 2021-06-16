@@ -1,5 +1,7 @@
 package thito.reflectedbytecode;
 
+import org.objectweb.asm.*;
+
 import java.lang.reflect.Array;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
@@ -27,6 +29,8 @@ public class GClass extends AbstractClass implements GMember {
     private Map<Type, GAnnotation<GClass>> annotationMap = new HashMap<>();
     private Body<BodyAccessor> staticInitializer;
     private Package pack;
+    private List<GGeneric> generics = new ArrayList<>();
+    boolean unknown;
     GClass(Context context, IClass declaring, String name) {
         this.declaringClass = declaring;
         this.context = context;
@@ -41,7 +45,16 @@ public class GClass extends AbstractClass implements GMember {
             pack = new Package(name,
                     null, null, null, null, null, null, null);
         }
+    }
 
+    public List<GGeneric> getGenerics() {
+        return generics;
+    }
+
+    public GGeneric addGeneric() {
+        GGeneric generic = new GGeneric(this);
+        generics.add(generic);
+        return generic;
     }
 
     public GAnnotation<GClass> annotate(Type type) {
@@ -68,6 +81,26 @@ public class GClass extends AbstractClass implements GMember {
         GConstructor constructor = new GConstructor(this);
         declaredConstructors.add(constructor);
         return constructor;
+    }
+
+    public GClass declareInnerClass() {
+        GClass clazz = declareInnerClass(getName()+"$"+getInnerClassesCount());
+        clazz.unknown = true;
+        return clazz;
+    }
+
+    public GClass declareInnerClass(String name) {
+        GClass clazz = context.createClass(name, this);
+        declaredClasses.add(clazz);
+        return clazz;
+    }
+
+    private int getInnerClassesCount() {
+        int i = 1;
+        while (!(IClass.findClass(getName()+"$"+i) instanceof UClass)) {
+            i++;
+        }
+        return i;
     }
 
     public GClass thatImplements(Type... interfaces) {

@@ -3,31 +3,26 @@ package thito.reflectedbytecode.jvm;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
-import thito.reflectedbytecode.Code;
-import thito.reflectedbytecode.Reference;
+import thito.reflectedbytecode.*;
+
+import java.lang.reflect.*;
 
 public class When {
     Condition jump(int opcode) {
-        Code code = Code.getCode();
-        Label markIfFalse = new Label();
-        MethodVisitor visitor = code.getCodeVisitor();
-        // this is a reversed logic WTF
-        visitor.visitJumpInsn(opcode, markIfFalse);
-        // it will pass to the next stack only if its true
-        // and will go to the specified Label only if its false
-        return new Condition(markIfFalse);
+        return new Condition(this, opcode, null);
     }
     Condition jump(int opcode, Object reference) {
-        Reference.handleWrite(reference);
-        Code code = Code.getCode();
-        Label markIfFalse = new Label();
-        MethodVisitor visitor = code.getCodeVisitor();
-        // this is a reversed logic WTF
-        visitor.visitJumpInsn(opcode, markIfFalse);
-        // it will pass to the next stack only if its true
-        // and will go to the specified Label only if its false
-        return new Condition(markIfFalse);
+        return new Condition(this, opcode, reference);
     }
+
+    Object reference;
+    Type hostType;
+
+    public When(Object reference) {
+        this.reference = reference;
+        this.hostType = ASMHelper.GetType(reference);
+    }
+
     public Condition isTrue() {
         return jump(Opcodes.IFEQ);
     }
@@ -45,21 +40,27 @@ public class When {
     // ICMPLT which stands for "int compare less than" works
     // as "int compare greater than" weird huh?
     public Condition isGreaterThan(Object comparable) {
-        return jump(Opcodes.IF_ICMPLT, comparable);
+        hostType = ASMHelper.GetHigherType(ASMHelper.FindRealType(ASMHelper.GetType(comparable)), ASMHelper.FindRealType(hostType));
+        return jump(Opcodes.IF_ICMPLE, comparable);
     }
     public Condition isLessThan(Object comparable) {
-        return jump(Opcodes.IF_ICMPGT, comparable);
+        hostType = ASMHelper.GetHigherType(ASMHelper.FindRealType(ASMHelper.GetType(comparable)), ASMHelper.FindRealType(hostType));
+        return jump(Opcodes.IF_ICMPGE, comparable);
     }
     public Condition isEqualsTo(Object comparable) {
+        hostType = ASMHelper.GetHigherType(ASMHelper.FindRealType(ASMHelper.GetType(comparable)), ASMHelper.FindRealType(hostType));
         return jump(Opcodes.IF_ICMPNE, comparable);
     }
     public Condition isNotEqualsTo(Object comparable) {
+        hostType = ASMHelper.GetHigherType(ASMHelper.FindRealType(ASMHelper.GetType(comparable)), ASMHelper.FindRealType(hostType));
         return jump(Opcodes.IF_ICMPEQ, comparable);
     }
     public Condition isGreaterOrEqualsTo(Object comparable) {
-        return jump(Opcodes.IF_ICMPLE, comparable);
+        hostType = ASMHelper.GetHigherType(ASMHelper.FindRealType(ASMHelper.GetType(comparable)), ASMHelper.FindRealType(hostType));
+        return jump(Opcodes.IF_ICMPLT, comparable);
     }
     public Condition isLessOrEqualsTo(Object comparable) {
-        return jump(Opcodes.IF_ICMPGE, comparable);
+        hostType = ASMHelper.GetHigherType(ASMHelper.FindRealType(ASMHelper.GetType(comparable)), ASMHelper.FindRealType(hostType));
+        return jump(Opcodes.IF_ICMPGT, comparable);
     }
 }

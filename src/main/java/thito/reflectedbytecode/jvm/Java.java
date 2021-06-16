@@ -1,12 +1,11 @@
 package thito.reflectedbytecode.jvm;
 
-import org.objectweb.asm.Label;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.*;
 import thito.reflectedbytecode.*;
 
 import java.lang.reflect.Type;
-import java.util.function.Consumer;
+import java.util.*;
+import java.util.function.*;
 
 public interface Java {
 
@@ -15,14 +14,32 @@ public interface Java {
     }
 
     static IClass Class(String name) {
-        try {
-            return IClass.fromClass(Class.forName(name));
-        } catch (Throwable t) {
-            IClass x = IClass.findClass(name);
-            if (x == null) x = UClass.Class(name);
-            return x;
-        }
+        return IClass.findClass(name);
     }
+
+    static Reference Cast(Reference object, Type type) {
+        return new Reference(type) {
+            @Override
+            protected void write() {
+                Code.getCode().getCodeVisitor().visitTypeInsn(Opcodes.CHECKCAST, ASMHelper.ToASMType(type).getInternalName());
+                object.write(Object.class);
+            }
+        };
+    }
+
+    static Reference Null() {
+        return new Reference(null) {
+            @Override
+            public void write() {
+                Code.getCode().getCodeVisitor().visitInsn(Opcodes.ACONST_NULL);
+            }
+
+        };
+    }
+
+    static Object Equals(Object a, Object b) {
+        return IClass.fromClass(Objects.class).getDeclaredMethod("equals", Object.class, Object.class).get().invoke(null, a, b);
+    };
 
     static UClass UClass(String name) {
         return UClass.Class(name);
@@ -30,221 +47,392 @@ public interface Java {
 
     // INNER CLASSES
     interface Enum {
+        Type getDeclaringClass();
         Constant valueOf(String name);
-        interface Constant {
-            String name();
-            Type getType();
+        abstract class Constant extends Reference {
+            public Constant(Type type) {
+                super(type);
+            }
+
+            public abstract String name();
+            public abstract Type getType();
         }
     }
 
     interface Logic {
+        static Reference True() {
+            return new Reference(boolean.class) {
+                @Override
+                protected void write() {
+                    Code.getCode().getCodeVisitor().visitInsn(Opcodes.ICONST_1);
+                }
+            };
+        }
+        static Reference False() {
+            return new Reference(boolean.class) {
+                @Override
+                protected void write() {
+                    Code.getCode().getCodeVisitor().visitInsn(Opcodes.ICONST_0);
+                }
+            };
+        }
         static Reference And(Object condition1, Object condition2) {
-            return () -> {
-                Reference.handleWrite(condition1);
-                Reference.handleWrite(condition2);
-                Code.getCode().getCodeVisitor().visitInsn(Opcodes.IAND);
+            Class<?> type = ASMHelper.GetIntegerHigherType(ASMHelper.FindRealType(ASMHelper.GetType(condition1)),
+                    ASMHelper.FindRealType(ASMHelper.GetType(condition2)));
+            return new Reference(type) {
+                @Override
+                public void write() {
+                    Reference.handleWrite(type, condition1);
+                    Reference.handleWrite(type, condition2);
+                    Code.getCode().getCodeVisitor().visitInsn(ASMHelper.ToASMType(type).getOpcode(Opcodes.IAND));
+                }
             };
         }
         static Reference Or(Object condition1, Object condition2) {
-            return () -> {
-                Reference.handleWrite(condition1);
-                Reference.handleWrite(condition2);
-                Code.getCode().getCodeVisitor().visitInsn(Opcodes.IOR);
+            Class<?> type = ASMHelper.GetIntegerHigherType(ASMHelper.FindRealType(ASMHelper.GetType(condition1)),
+                    ASMHelper.FindRealType(ASMHelper.GetType(condition2)));
+            return new Reference(type) {
+                @Override
+                public void write() {
+                    Reference.handleWrite(type, condition1);
+                    Reference.handleWrite(type, condition2);
+                    Code.getCode().getCodeVisitor().visitInsn(ASMHelper.ToASMType(type).getOpcode(Opcodes.IOR));
+                }
             };
         }
         static Reference XOr(Object condition1, Object condition2) {
-            return () -> {
-                Reference.handleWrite(condition1);
-                Reference.handleWrite(condition2);
-                Code.getCode().getCodeVisitor().visitInsn(Opcodes.IXOR);
+            Class<?> type = ASMHelper.GetIntegerHigherType(ASMHelper.FindRealType(ASMHelper.GetType(condition1)),
+                    ASMHelper.FindRealType(ASMHelper.GetType(condition2)));
+            return new Reference(type) {
+                @Override
+                public void write() {
+                    Reference.handleWrite(type, condition1);
+                    Reference.handleWrite(type, condition2);
+                    Code.getCode().getCodeVisitor().visitInsn(ASMHelper.ToASMType(type).getOpcode(Opcodes.IXOR));
+                }
             };
         }
         static Reference Negate(Object condition) {
-            return () -> {
-                Reference.handleWrite(condition);
-                Code.getCode().getCodeVisitor().visitInsn(Opcodes.INEG);
+            Type type = ASMHelper.GetType(condition);
+            return new Reference(type) {
+                @Override
+                public void write() {
+                    Reference.handleWrite(type, condition);
+                    Code.getCode().getCodeVisitor().visitInsn(ASMHelper.ToASMType(type).getOpcode(Opcodes.INEG));
+                }
             };
         }
     }
 
+    static Reference NewArray(Class<?> type, Object... dimensions) {
+        IClass iClass = IClass.fromClass(type);
+        char[] chars = new char[dimensions.length];
+        for (int i = 0; i < dimensions.length; i++) {
+            chars[i] = '[';
+        }
+        return new Reference(IClass.findClass(new String(chars)+iClass.getDescriptor())) {
+            @Override
+            public void write() {
+                for (int i = 0; i < dimensions.length; i++) {
+                    Reference.handleWrite(int.class, dimensions[i]);
+                }
+                MethodVisitor visitor = Code.getCode().getCodeVisitor();
+                visitor.visitMultiANewArrayInsn(new String(chars)+iClass.getDescriptor(), dimensions.length);
+            }
+        };
+    }
+
+    static Reference WrapArray(Reference array, Object index, Object value) {
+        return new Reference(array.getType()) {
+            @Override
+            protected void write() {
+                array.write(array.getType());
+                Code.getCode().getCodeVisitor().visitInsn(Opcodes.DUP);
+                Reference.handleWrite(int.class, index);
+                Reference.handleWrite(ASMHelper.GetArrayType(array), value);
+                MethodVisitor visitor = Code.getCode().getCodeVisitor();
+                visitor.visitInsn(Opcodes.AASTORE);
+            }
+        };
+    }
+
     interface Math {
         static Reference toInt(Object a) {
-            return () -> {
-                Reference.handleWrite(a);
-                Code.getCode().getCodeVisitor().visitInsn(Opcodes.D2I);
+            Type type = ASMHelper.GetType(a);
+            return new Reference(int.class) {
+                @Override
+                public void write() {
+                    Reference.handleWrite(type, a);
+                    int opcode = ASMHelper.getCastedOpcodes(ASMHelper.FindRealType(type), Opcodes.D2I);
+                    if (opcode != -1) {
+                        Code.getCode().getCodeVisitor().visitInsn(opcode);
+                    }
+                }
             };
         }
         static Reference toDouble(Object a) {
-            return () -> {
-                Reference.handleWrite(a);
-                Code.getCode().getCodeVisitor().visitInsn(Opcodes.I2D);
+            Type type = ASMHelper.GetType(a);
+            return new Reference(double.class) {
+                @Override
+                public void write() {
+                    Reference.handleWrite(type, a);
+                    int opcode = ASMHelper.getCastedOpcodes(ASMHelper.FindRealType(type), Opcodes.I2D);
+                    if (opcode != -1) {
+                        Code.getCode().getCodeVisitor().visitInsn(opcode);
+                    }
+                }
             };
         }
         static Reference toFloat(Object a) {
-            return () -> {
-                Reference.handleWrite(a);
-                Code.getCode().getCodeVisitor().visitInsn(Opcodes.I2F);
+            Type type = ASMHelper.GetType(a);
+            return new Reference(float.class) {
+                @Override
+                public void write() {
+                    Reference.handleWrite(type, a);
+                    int opcode = ASMHelper.getCastedOpcodes(ASMHelper.FindRealType(type), Opcodes.I2F);
+                    if (opcode != -1) {
+                        Code.getCode().getCodeVisitor().visitInsn(opcode);
+                    }
+                }
             };
         }
         static Reference toByte(Object a) {
-            return () -> {
-                Reference.handleWrite(a);
-                Code.getCode().getCodeVisitor().visitInsn(Opcodes.I2B);
+            Type type = ASMHelper.GetType(a);
+            return new Reference(byte.class) {
+                @Override
+                public void write() {
+                    Reference.handleWrite(type, a);
+                    int opcode = ASMHelper.getCastedOpcodes(ASMHelper.FindRealType(type), Opcodes.I2B);
+                    if (opcode != -1) {
+                        Code.getCode().getCodeVisitor().visitInsn(opcode);
+                    }
+                }
             };
         }
         static Reference toLong(Object a) {
-            return () -> {
-                Reference.handleWrite(a);
-                Code.getCode().getCodeVisitor().visitInsn(Opcodes.I2L);
+            Type type = ASMHelper.GetType(a);
+            return new Reference(long.class) {
+                @Override
+                public void write() {
+                    Reference.handleWrite(type, a);
+                    int opcode = ASMHelper.getCastedOpcodes(ASMHelper.FindRealType(type), Opcodes.I2L);
+                    if (opcode != -1) {
+                        Code.getCode().getCodeVisitor().visitInsn(opcode);
+                    }
+                }
             };
         }
         static Reference toShort(Object a) {
-            return () -> {
-                Reference.handleWrite(a);
-                Code.getCode().getCodeVisitor().visitInsn(Opcodes.I2S);
+            Type type = ASMHelper.GetType(a);
+            return new Reference(short.class) {
+                @Override
+                public void write() {
+                    Reference.handleWrite(type, a);
+                    int opcode = ASMHelper.getCastedOpcodes(ASMHelper.FindRealType(type), Opcodes.I2S);
+                    if (opcode != -1) {
+                        Code.getCode().getCodeVisitor().visitInsn(opcode);
+                    }
+                }
             };
         }
         static Reference toChar(Object a) {
-            return () -> {
-                Reference.handleWrite(a);
-                Code.getCode().getCodeVisitor().visitInsn(Opcodes.I2C);
+            Type type = ASMHelper.GetType(a);
+            return new Reference(char.class) {
+                @Override
+                public void write() {
+                    Reference.handleWrite(type, a);
+                    int opcode = ASMHelper.getCastedOpcodes(ASMHelper.FindRealType(type), Opcodes.I2C);
+                    if (opcode != -1) {
+                        Code.getCode().getCodeVisitor().visitInsn(opcode);
+                    }
+                }
             };
         }
         static Reference add(Object a, Object b) {
-            return () -> {
-                Reference.handleWrite(a);
-                Reference.handleWrite(b);
-                Code.getCode().getCodeVisitor().visitInsn(Opcodes.IADD);
+            Class<?> highest = ASMHelper.GetHigherType(
+                    (Class<?>) ASMHelper.GetType(a),
+                    (Class<?>) ASMHelper.GetType(b));
+            return new Reference(highest) {
+                @Override
+                public void write() {
+                    Reference.handleWrite(highest, a);
+                    Reference.handleWrite(highest, b);
+                    Code.getCode().getCodeVisitor().visitInsn(org.objectweb.asm.Type.getType(highest).getOpcode(Opcodes.IADD));
+                }
             };
         }
         static Reference multiply(Object a, Object b) {
-            return () -> {
-                Reference.handleWrite(a);
-                Reference.handleWrite(b);
-                Code.getCode().getCodeVisitor().visitInsn(Opcodes.IMUL);
+            Class<?> highest = ASMHelper.GetHigherType(
+                    (Class<?>) ASMHelper.GetType(a),
+                    (Class<?>) ASMHelper.GetType(b));
+            return new Reference(highest) {
+                @Override
+                public void write() {
+                    Reference.handleWrite(highest, a);
+                    Reference.handleWrite(highest, b);
+                    Code.getCode().getCodeVisitor().visitInsn(org.objectweb.asm.Type.getType(highest).getOpcode(Opcodes.IMUL));
+                }
             };
         }
         static Reference divide(Object a, Object b) {
-            return () -> {
-                Reference.handleWrite(a);
-                Reference.handleWrite(b);
-                Code.getCode().getCodeVisitor().visitInsn(Opcodes.IDIV);
+            Class<?> highest = ASMHelper.GetHigherType(
+                    (Class<?>) ASMHelper.GetType(a),
+                    (Class<?>) ASMHelper.GetType(b));
+            return new Reference(highest) {
+                @Override
+                public void write() {
+                    Reference.handleWrite(highest, a);
+                    Reference.handleWrite(highest, b);
+                    Code.getCode().getCodeVisitor().visitInsn(org.objectweb.asm.Type.getType(highest).getOpcode(Opcodes.IDIV));
+                }
             };
         }
         static Reference subtract(Object a, Object b) {
-            return () -> {
-                Reference.handleWrite(a);
-                Reference.handleWrite(b);
-                Code.getCode().getCodeVisitor().visitInsn(Opcodes.ISUB);
+            Class<?> highest = ASMHelper.GetHigherType(
+                    (Class<?>) ASMHelper.GetType(a),
+                    (Class<?>) ASMHelper.GetType(b));
+            return new Reference(highest) {
+                @Override
+                public void write() {
+                    Reference.handleWrite(highest, a);
+                    Reference.handleWrite(highest, b);
+                    Code.getCode().getCodeVisitor().visitInsn(org.objectweb.asm.Type.getType(highest).getOpcode(Opcodes.ISUB));
+                }
             };
         }
         static Reference mod(Object a, Object b) {
-            return () -> {
-                Reference.handleWrite(a);
-                Reference.handleWrite(b);
-                Code.getCode().getCodeVisitor().visitInsn(Opcodes.IREM);
+            Class<?> highest = ASMHelper.GetHigherType(
+                    (Class<?>) ASMHelper.GetType(a),
+                    (Class<?>) ASMHelper.GetType(b));
+            return new Reference(highest) {
+                @Override
+                public void write() {
+                    Reference.handleWrite(highest, a);
+                    Reference.handleWrite(highest, b);
+                    Code.getCode().getCodeVisitor().visitInsn(org.objectweb.asm.Type.getType(highest).getOpcode(Opcodes.IREM));
+                }
             };
         }
         static Reference shl(Object a, Object b) {
-            return () -> {
-                Reference.handleWrite(a);
-                Reference.handleWrite(b);
-                Code.getCode().getCodeVisitor().visitInsn(Opcodes.ISHL);
+            Class<?> highest = ASMHelper.GetIntegerHigherType(
+                    (Class<?>) ASMHelper.GetType(a),
+                    (Class<?>) ASMHelper.GetType(b));
+            return new Reference(highest) {
+                @Override
+                public void write() {
+                    Reference.handleWrite(highest, a);
+                    Reference.handleWrite(highest, b);
+                    Code.getCode().getCodeVisitor().visitInsn(org.objectweb.asm.Type.getType(highest).getOpcode(Opcodes.ISHL));
+                }
             };
         }
         static Reference shr(Object a, Object b) {
-            return () -> {
-                Reference.handleWrite(a);
-                Reference.handleWrite(b);
-                Code.getCode().getCodeVisitor().visitInsn(Opcodes.ISHR);
+            Class<?> highest = ASMHelper.GetIntegerHigherType(
+                    (Class<?>) ASMHelper.GetType(a),
+                    (Class<?>) ASMHelper.GetType(b));
+            return new Reference(highest) {
+                @Override
+                public void write() {
+                    Reference.handleWrite(highest, a);
+                    Reference.handleWrite(highest, b);
+                    Code.getCode().getCodeVisitor().visitInsn(org.objectweb.asm.Type.getType(highest).getOpcode(Opcodes.ISHR));
+                }
             };
         }
         static Reference uShr(Object a, Object b) {
-            return () -> {
-                Reference.handleWrite(a);
-                Reference.handleWrite(b);
-                Code.getCode().getCodeVisitor().visitInsn(Opcodes.IUSHR);
+            Class<?> highest = ASMHelper.GetIntegerHigherType(
+                    (Class<?>) ASMHelper.GetType(a),
+                    (Class<?>) ASMHelper.GetType(b));
+            return new Reference(highest) {
+                @Override
+                public void write() {
+                    Reference.handleWrite(highest, a);
+                    Reference.handleWrite(highest, b);
+                    Code.getCode().getCodeVisitor().visitInsn(org.objectweb.asm.Type.getType(highest).getOpcode(Opcodes.IUSHR));
+                }
             };
         }
     }
 
     // METHODS
     static Enum Enum(Type type) {
-        return name -> new Enum.Constant() {
+        return new Enum() {
             @Override
-            public String name() {
-                return name;
-            }
-
-            @Override
-            public Type getType() {
+            public Type getDeclaringClass() {
                 return type;
             }
-        };
-    }
 
-    static Reference Cast(Type type, Object object) {
-        return () -> {
-            Reference.handleWrite(object);
-            Code.getCode().getCodeVisitor().visitTypeInsn(Opcodes.CHECKCAST, TypeHelper.getInternalName(type));
-        };
-    }
+            @Override
+            public Constant valueOf(String name) {
+                return new Enum.Constant(type) {
 
-    static ArrayReference NewArray(Type component, int... length) {
-        return () -> {
-            Code code = Code.getCode();
-            MethodVisitor visitor = code.getCodeVisitor();
-            if (length.length == 0) {
-                visitor.visitLdcInsn(0);
-                visitor.visitTypeInsn(Opcodes.ANEWARRAY, component.getTypeName().replace('.', '/'));
-            } else if (length.length == 1) {
-                visitor.visitLdcInsn(length[0]);
-                visitor.visitTypeInsn(Opcodes.ANEWARRAY, component.getTypeName().replace('.', '/'));
-            } else {
-                StringBuilder builder = new StringBuilder(component.getTypeName().length()+2+ length.length);
-                for (int i = 0; i < length.length; i++) {
-                    builder.append('[');
-                    visitor.visitLdcInsn(length[i]);
-                }
-                builder.append('L');
-                builder.append(component.getTypeName().replace('.', '/'));
-                builder.append(';');
-                visitor.visitMultiANewArrayInsn(builder.toString(), length.length);
+                    @Override
+                    protected void write() {
+                        Code.getCode().getCodeVisitor().visitFieldInsn(Opcodes.GETSTATIC, type.getTypeName().replace('.', '/'), name, "L"+type.getTypeName().replace('.', '/')+";");
+                    }
+
+                    @Override
+                    public String name() {
+                        return name;
+                    }
+
+                    @Override
+                    public Type getType() {
+                        return type;
+                    }
+                };
             }
         };
     }
-    static void SetArrayElement(Reference array, Object index, Object value) {
-        Reference.handleWrite(array);
-        Reference.handleWrite(index);
+
+    static void SetArrayElement(Object array, Object index, Object value) {
+        Reference.handleWrite(null, array);
+        Reference.handleWrite(int.class, index);
+        Reference.handleWrite(ASMHelper.GetArrayType(array), value);
         MethodVisitor visitor = Code.getCode().getCodeVisitor();
-        Reference.handleWrite(value);
         visitor.visitInsn(Opcodes.AASTORE);
     }
-    static Reference GetArrayElement(Reference array, Object index) {
-        return () -> {
-            Reference.handleWrite(array);
-            Reference.handleWrite(index);
-            MethodVisitor visitor = Code.getCode().getCodeVisitor();
-            visitor.visitInsn(Opcodes.AALOAD);
+    static Reference GetArrayElement(Object array, Object index) {
+        return new Reference(ASMHelper.GetArrayType(array)) {
+            @Override
+            public void write() {
+                Reference.handleWrite(null, array);
+                Reference.handleWrite(int.class, index);
+                MethodVisitor visitor = Code.getCode().getCodeVisitor();
+                visitor.visitInsn(Opcodes.AALOAD);
+            }
+        };
+    }
+    static Reference Type(Type type) {
+        return new Reference(Class.class) {
+            @Override
+            public void write() {
+                Code.getCode().getCodeVisitor().visitLdcInsn(org.objectweb.asm.Type.getType(ASMHelper.FindRealType(type)));
+            }
         };
     }
     static Try Try(Runnable tryBody) {
-        return null;
+        return new Try(tryBody);
     }
     static When If(Object object) {
-        Reference.handleWrite(object);
-        return new When();
+        return new When(object);
     }
-    static Reference ArrayLength(Reference array) {
-        return () -> {
-            Reference.handleWrite(array);
-            Code.getCode().getCodeVisitor().visitInsn(Opcodes.ARRAYLENGTH);
+    static Reference ArrayLength(Object array) {
+        return new Reference(int.class) {
+            @Override
+            public void write() {
+                Reference.handleWrite(null, array);
+                Code.getCode().getCodeVisitor().visitInsn(Opcodes.ARRAYLENGTH);
+            }
         };
     }
     static Reference InstanceOf(Object value, Type type) {
-        return () -> {
-            Reference.handleWrite(value);
-            Code.getCode().getCodeVisitor().visitTypeInsn(Opcodes.INSTANCEOF, type.getTypeName().replace('.', '/'));
+        return new Reference(boolean.class) {
+            @Override
+            public void write() {
+                Reference.handleWrite(Object.class, value);
+                Code.getCode().getCodeVisitor().visitTypeInsn(Opcodes.INSTANCEOF, type.getTypeName().replace('.', '/'));
+            }
         };
     }
     static void Label(String label) {
@@ -266,5 +454,7 @@ public interface Java {
     }
     static void Throw(Object reference) {
         MethodVisitor visitor = Code.getCode().getCodeVisitor();
+        Reference.handleWrite(Throwable.class, reference);
+        visitor.visitInsn(Opcodes.ATHROW);
     }
 }

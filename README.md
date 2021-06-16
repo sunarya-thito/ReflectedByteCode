@@ -7,7 +7,6 @@ Generate Dynamic Class as easy as reflection
 package your.program;
 
 import thito.reflectedbytecode.*;
-import thito.reflectedbytecode.jvm.Java;
 
 import java.io.FileOutputStream;
 import java.io.PrintStream;
@@ -51,19 +50,19 @@ public class Example {
                                     If(newInstance).isNull().Then(() -> {
                                         Try(() -> {
                                             newInstance.ToString();
-                                        }).Catch(NullPointerException.class).Thrown(npe -> {
+                                        }).Catch(NullPointerException.class).Caught(npe -> {
                                             // process the null pointer exception here
-                                        }).Catch(Error.class, Exception.class).Thrown(error -> {
+                                        }).Catch(Error.class, Exception.class).Caught(error -> {
 
                                             // Create a local field
                                             LField local = instance.createVariable();
                                             local.set(add(100, multiply(100, 40)));
-                                            
+
                                             LField local2 = instance.createVariable();
                                             local2.set(NewArray(int.class, 1));
-                                            
+
                                             local2.get().asArray().set(local.get());
-                                            
+
                                         });
                                     });
                                 });
@@ -86,7 +85,7 @@ public class Example {
             try (FileOutputStream outputStream = new FileOutputStream("Example.class")) {
                 outputStream.write(context.writeClass(clazz));
             }
-            
+
             // Load it into memory?
             ClassLoader loader = context.loadIntoMemory();
             Class<?> example = loader.getClass("example.TestClass");

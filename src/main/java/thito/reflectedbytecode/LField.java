@@ -3,26 +3,50 @@ package thito.reflectedbytecode;
 
 import org.objectweb.asm.*;
 
+import java.lang.reflect.Type;
+
 public class LField implements ILocalField, GMember {
 
     private int localIndex;
-    LField() {
-        localIndex = Code.getCode().requestLocalIndex();
+    private IClass type;
+    public LField(IClass type, int index) {
+        this.type = type;
+        localIndex = index;
     }
 
     private int modifiers;
 
+    public int getLocalIndex() {
+        return localIndex;
+    }
+
+    public void setType(IClass type) {
+        this.type = type;
+    }
+
+    public void setLocalIndex(int localIndex) {
+        this.localIndex = localIndex;
+    }
+
     @Override
     public void set(Object value) {
-        Reference.handleWrite(value);
-        Code.getCode().getCodeVisitor().visitVarInsn(Opcodes.ASTORE, localIndex);
+        Reference.handleWrite(type, value);
+        Code.getCode().getCodeVisitor().visitVarInsn(ASMHelper.ToASMType(type).getOpcode(Opcodes.ISTORE), localIndex);
     }
 
     @Override
     public Reference get() {
-        return () -> {
-            Code.getCode().getCodeVisitor().visitVarInsn(Opcodes.ALOAD, localIndex);
+        return new Reference(type) {
+            @Override
+            public void write() {
+                Code.getCode().getCodeVisitor().visitVarInsn(ASMHelper.ToASMType(type).getOpcode(Opcodes.ILOAD), localIndex);
+            }
         };
+    }
+
+    @Override
+    public IClass getType() {
+        return type;
     }
 
     @Override
@@ -38,5 +62,13 @@ public class LField implements ILocalField, GMember {
     @Override
     public void setModifiers(int modifiers) {
         this.modifiers = modifiers;
+    }
+
+    @Override
+    public String toString() {
+        return "LField{" +
+                "localIndex=" + localIndex +
+                ", type=" + type +
+                '}';
     }
 }

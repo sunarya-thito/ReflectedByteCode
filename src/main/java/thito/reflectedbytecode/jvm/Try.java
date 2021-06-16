@@ -1,24 +1,21 @@
 package thito.reflectedbytecode.jvm;
 
-import thito.reflectedbytecode.Body;
-import thito.reflectedbytecode.BodyAccessor;
-import thito.reflectedbytecode.IClass;
+import thito.reflectedbytecode.*;
 
-import java.lang.reflect.Type;
-import java.util.HashMap;
-import java.util.Map;
+import java.lang.reflect.*;
 
 public class Try {
-    private Runnable mainBody;
-    private Map<IClass, Body<BodyAccessor>> catchBodyMap = new HashMap<>();
+    protected Runnable mainBody;
+    protected Type type;
+    protected Body<Caught> body;
 
-    public Catch Catch(Type... throwables) {
-        return new Catch(this, throwables);
+    public Try(Runnable mainBody) {
+        this.mainBody = mainBody;
     }
 
-    public Try Finally(Runnable body) {
-
-        return this;
+    public Catch Catch(Type type) {
+        this.type = type;
+        return new Catch(this);
     }
 
 }

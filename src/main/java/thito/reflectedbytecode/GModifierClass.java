@@ -1,5 +1,7 @@
 package thito.reflectedbytecode;
 
+import org.objectweb.asm.*;
+
 import java.lang.reflect.Modifier;
 
 public class GModifierClass<T extends GClass> extends GModifierInterface<T> {
@@ -8,31 +10,31 @@ public class GModifierClass<T extends GClass> extends GModifierInterface<T> {
     }
 
     public GModifierClass<T> makePublic() {
-        return this.or(Modifier.PUBLIC);
+        return this.or(Opcodes.ACC_PUBLIC);
     }
     public GModifierClass<T> makePrivate() {
-        return this.or(Modifier.PRIVATE);
+        return this.or(Opcodes.ACC_PRIVATE);
     }
     public GModifierClass<T> makeProtected() {
-        return this.or(Modifier.PROTECTED);
+        return this.or(Opcodes.ACC_PROTECTED);
     }
     public GModifierClass<T> makeStatic() {
-        return this.or(Modifier.STATIC);
+        return this.or(Opcodes.ACC_STATIC);
     }
     public GModifierClass<T> makeFinal() {
-        return this.or(Modifier.FINAL);
+        return this.or(Opcodes.ACC_FINAL);
     }
     public GModifierClass<T> makeStrict() {
-        return this.or(Modifier.STRICT);
+        return this.or(Opcodes.ACC_STRICT);
     }
     public GModifierInterface<T> makeAbstract() {
-        nAnd(Modifier.FINAL);
-        return or(Modifier.ABSTRACT);
+        nAnd(Opcodes.ACC_FINAL);
+        return or(Opcodes.ACC_ABSTRACT);
     }
     public GModifierInterface<T> makeInterface() {
-        nAnd(Modifier.FINAL);
-        or(Modifier.INTERFACE);
-        return or(Modifier.ABSTRACT);
+        nAnd(Opcodes.ACC_FINAL);
+        or(Opcodes.ACC_INTERFACE);
+        return or(Opcodes.ACC_ABSTRACT);
     }
 
     @Override

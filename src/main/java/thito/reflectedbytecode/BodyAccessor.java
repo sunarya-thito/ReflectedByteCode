@@ -2,29 +2,31 @@ package thito.reflectedbytecode;
 
 import org.objectweb.asm.Opcodes;
 
-public abstract class BodyAccessor implements Reference {
+import java.lang.reflect.*;
 
-    protected abstract boolean hasInstance();
+public abstract class BodyAccessor extends Reference {
+
+    public BodyAccessor(Type type) {
+        super(type);
+    }
+
+    BodyAccessor parent;
+
+    protected BodyAccessor getParent() {
+        return parent;
+    }
+
+    void beginScope() {
+
+    }
 
     @Override
     public void write() {
-        if (!hasInstance()) throw new IllegalStateException("static");
-        Code.getCode().getCodeVisitor().visitVarInsn(Opcodes.ALOAD, 0);
+        throw new UnsupportedOperationException();
     }
 
-    public abstract IClass getSuperClass();
-    public abstract LField createVariable();
+    void closeScope() {
 
-    public void doneReturn() {
-        Code code = Code.getCode();
-        code.markReturn();
-        code.getCodeVisitor().visitInsn(Opcodes.RETURN);
     }
 
-    public void doneReturn(Object value) {
-        Code code = Code.getCode();
-        code.markReturn();
-        Reference.handleWrite(value);
-        code.getCodeVisitor().visitInsn(Opcodes.RETURN);
-    }
 }

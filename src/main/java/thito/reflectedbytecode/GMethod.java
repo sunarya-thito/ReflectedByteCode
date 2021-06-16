@@ -1,16 +1,13 @@
 package thito.reflectedbytecode;
 
+import org.objectweb.asm.*;
+
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.util.*;
 
-public class GMethod extends AbstractMethod implements GMember {
+public class GMethod extends AbstractMethod implements GMember, BodyOwner {
 
-    LField createLocalField() {
-        LField field = new LField();
-        localFields.add(field);
-        return field;
-    }
 
     PField getArgument(int index) {
         return parameters[index];
@@ -21,10 +18,10 @@ public class GMethod extends AbstractMethod implements GMember {
     private GClass declaringClass;
     private IClass returnType;
     private PField[] parameters;
-    private List<LField> localFields = new ArrayList<>();
     private Body<GMethodAccessor> body;
     private Type[] Throws;
     private Map<Type, GAnnotation<GMethod>> annotationMap = new HashMap<>();
+    private List<Runnable> compileTask = new ArrayList<>();
 
     GMethod(GClass declaringClass, String name) {
         this.name = name;
@@ -37,6 +34,21 @@ public class GMethod extends AbstractMethod implements GMember {
 
     protected Map<Type, GAnnotation<GMethod>> getAnnotationMap() {
         return annotationMap;
+    }
+
+    @Override
+    public void putPreCompileTask(Runnable task) {
+        compileTask.add(0, task);
+    }
+
+    public void putPostCompileTask(Runnable postTask) {
+        compileTask.add(postTask);
+    }
+
+    @Override
+    public void executeCompileTask() {
+        compileTask.forEach(Runnable::run);
+        compileTask.clear();
     }
 
     public GMethod exceptionThrows(Type...exceptions) {
@@ -53,19 +65,23 @@ public class GMethod extends AbstractMethod implements GMember {
         return body;
     }
 
+    public GMethod returnType(Type type) {
+        return returnType(IClass.fromClass(type));
+    }
+
     public GMethod returnType(IClass returnType) {
         this.returnType = returnType;
         return this;
     }
 
     public GMethod parameters(Type... types) {
-        return _parameters(Arrays.stream(types).map(x -> new PField(IClass.fromClass(x))).toArray(PField[]::new));
+        return _parameters(Arrays.stream(types).map(x -> new PField(IClass.fromClass(x), this)).toArray(PField[]::new));
     }
 
     private GMethod _parameters(PField... parameters) {
         this.parameters = parameters;
         for (int i = 0; i < parameters.length; i++) {
-            parameters[i].localIndex = i + 0;
+            parameters[i].localIndex = i;
         }
         return this;
     }

@@ -1,39 +1,42 @@
 package thito.reflectedbytecode;
 
-import java.lang.reflect.Modifier;
+import org.objectweb.asm.*;
 
-public class GConstructorAccessor extends BodyAccessor {
-    private GConstructor constructor;
+public class GConstructorAccessor extends MemberBodyAccessor {
 
     public GConstructorAccessor(GConstructor constructor) {
-        this.constructor = constructor;
+        super(constructor, constructor.getDeclaringClass());
+    }
+
+    @Override
+    public GConstructor getMember() {
+        return (GConstructor) super.getMember();
     }
 
     public IClass getSuperClass() {
-        return constructor.getDeclaringClass().getSuperClass();
-    }
-
-    public LField createVariable() {
-        return constructor.createLocalField();
-    }
-
-    public PField getParameter(int index) {
-        return constructor.getArgument(index);
-    }
-
-    public <T extends ArrayReference> T getArgument(int index) {
-        return getParameter(index).get();
+        return getMember().getDeclaringClass().getSuperClass();
     }
 
     public void constructDefault() {
         IClass clazz = getSuperClass();
+        if (clazz == null) {
+            MethodVisitor defaultConstructorVisitor = Code.getCode().getCodeVisitor();
+            defaultConstructorVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+            defaultConstructorVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL,
+                    "java/lang/Object", "<init>", "()V", false);
+            return;
+        }
         clazz.getConstructor().ifPresent(constructor -> {
             ((AbstractConstructor) constructor).invoke();
         });
     }
 
+    public void construct(IConstructor constructor, Object...args) {
+        ((AbstractConstructor) constructor).invoke(args);
+    }
+
     @Override
-    protected boolean hasInstance() {
-        return !Modifier.isStatic(constructor.getModifiers());
+    public void write() {
+        Code.getCode().getCodeVisitor().visitVarInsn(Opcodes.ALOAD, 0);
     }
 }

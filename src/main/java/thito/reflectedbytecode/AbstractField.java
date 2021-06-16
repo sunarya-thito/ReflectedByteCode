@@ -10,9 +10,9 @@ public abstract class AbstractField implements IField {
     public void set(Object instance, Object value) {
         Code code = Code.getCode();
         if (!Modifier.isStatic(getModifiers())) {
-            Reference.handleWrite(instance);
+            Reference.handleWrite(getDeclaringClass(), instance);
         }
-        Reference.handleWrite(value);
+        Reference.handleWrite(getType(), value);
         MethodVisitor visitor = code.getCodeVisitor();
         visitor.visitFieldInsn(
                 Modifier.isStatic(getModifiers()) ? Opcodes.PUTSTATIC : Opcodes.PUTFIELD,
@@ -22,19 +22,22 @@ public abstract class AbstractField implements IField {
         );
     }
 
-    public <T extends Reference> T get(Object instance) {
-        return (T) (ArrayReference) () -> {
-            Code code = Code.getCode();
-            if (instance != null && !Modifier.isStatic(getModifiers())) {
-                Reference.handleWrite(instance);
+    public Reference get(Object instance) {
+        return new Reference(getType()) {
+            @Override
+            public void write() {
+                Code code = Code.getCode();
+                if (instance != null && !Modifier.isStatic(getModifiers())) {
+                    Reference.handleWrite(getDeclaringClass(), instance);
+                }
+                MethodVisitor visitor = code.getCodeVisitor();
+                visitor.visitFieldInsn(
+                        instance == null || Modifier.isStatic(getModifiers()) ? Opcodes.GETSTATIC : Opcodes.GETFIELD,
+                        getDeclaringClass().getRawName(),
+                        getName(),
+                        AbstractField.this.getType().getDescriptor()
+                );
             }
-            MethodVisitor visitor = code.getCodeVisitor();
-            visitor.visitFieldInsn(
-                    instance == null || Modifier.isStatic(getModifiers()) ? Opcodes.GETSTATIC : Opcodes.GETFIELD,
-                    getDeclaringClass().getRawName(),
-                    getName(),
-                    getType().getDescriptor()
-            );
         };
     }
 

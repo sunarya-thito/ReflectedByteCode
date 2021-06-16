@@ -3,15 +3,24 @@ package thito.reflectedbytecode;
 
 import org.objectweb.asm.*;
 
+import java.lang.reflect.*;
+
 public class PField implements IParameterField, GMember {
 
     private int modifiers;
     private IClass type;
 
     int localIndex;
+    private IParameterizedMember member;
 
-    public PField(IClass type) {
+    public PField(IClass type, IParameterizedMember member) {
         this.type = type;
+        this.member = member;
+    }
+
+    @Override
+    public IParameterizedMember getDeclaringMember() {
+        return member;
     }
 
     @Override
@@ -31,19 +40,32 @@ public class PField implements IParameterField, GMember {
 
     @Override
     public void set(Object value) {
-        Reference.handleWrite(value);
-        Code.getCode().getCodeVisitor().visitVarInsn(Opcodes.ASTORE, localIndex);
+        Reference.handleWrite(type, value);
+        Code.getCode().getCodeVisitor().visitVarInsn(ASMHelper.ToASMType(type).getOpcode(Opcodes.ISTORE), Modifier.isStatic(member.getModifiers()) ?
+                localIndex : localIndex + 1);
     }
 
     @Override
-    public <T extends Reference> T get() {
-        return (T) (ArrayReference) () -> {
-            Code.getCode().getCodeVisitor().visitVarInsn(Opcodes.ALOAD, localIndex);
+    public Reference get() {
+        return new Reference(type) {
+            @Override
+            public void write() {
+                Code.getCode().getCodeVisitor().visitVarInsn(ASMHelper.ToASMType(type).getOpcode(Opcodes.ILOAD), Modifier.isStatic(member.getModifiers()) ?
+                        localIndex : localIndex + 1);
+            }
         };
     }
 
     @Override
     public IClass getType() {
         return type;
+    }
+
+    @Override
+    public String toString() {
+        return "PField{" +
+                "type=" + type +
+                ", localIndex=" + localIndex +
+                '}';
     }
 }

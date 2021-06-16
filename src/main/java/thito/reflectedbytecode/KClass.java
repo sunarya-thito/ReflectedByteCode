@@ -2,8 +2,7 @@ package thito.reflectedbytecode;
 
 import org.objectweb.asm.*;
 
-import java.util.Arrays;
-import java.util.WeakHashMap;
+import java.util.*;
 
 public class KClass extends AbstractClass implements IClass {
 
@@ -133,5 +132,15 @@ public class KClass extends AbstractClass implements IClass {
     @Override
     public IPackage getPackage() {
         return new Package(clazz.getPackage());
+    }
+
+    @Override
+    public String getTypeName() {
+        return clazz.getTypeName();
+    }
+
+    @Override
+    public String toString() {
+        return clazz.toString();
     }
 }

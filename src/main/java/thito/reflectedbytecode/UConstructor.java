@@ -26,8 +26,9 @@ public class UConstructor extends AbstractConstructor {
         Code code = Code.getCode();
         MethodVisitor visitor = code.getCodeVisitor();
         visitor.visitVarInsn(Opcodes.ALOAD, 0);
-        for (Object arg : args) {
-            Reference.handleWrite(arg);
+        IClass[] parameterTypes = getParameterTypes();
+        for (int i = 0; i < parameterTypes.length; i++) {
+            Reference.handleWrite(parameterTypes[i], args[i]);
         }
         visitor.visitMethodInsn(Opcodes.INVOKESPECIAL, getDeclaringClass().getRawName(), "<init>", "()V", false);
     }

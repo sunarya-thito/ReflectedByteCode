@@ -7,13 +7,8 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.util.*;
 
-public class GConstructor extends AbstractConstructor implements GMember {
+public class GConstructor extends AbstractConstructor implements GMember, BodyOwner {
 
-    protected LField createLocalField() {
-        LField field = new LField();
-        localFields.add(field);
-        return field;
-    }
     protected PField getArgument(int index) {
         return parameters[index];
     }
@@ -21,10 +16,10 @@ public class GConstructor extends AbstractConstructor implements GMember {
     private int modifiers = Modifier.PUBLIC;
     private GClass declaringClass;
     private PField[] parameters;
-    private List<LField> localFields = new ArrayList<>();
     private Body<GConstructorAccessor> body;
     private Type[] Throws;
     private Map<Type, GAnnotation<GConstructor>> annotationMap = new HashMap<>();
+    private List<Runnable> compileTask = new ArrayList<>();
 
     GConstructor(GClass declaringClass) {
         this.declaringClass = declaringClass;
@@ -32,6 +27,21 @@ public class GConstructor extends AbstractConstructor implements GMember {
 
     public GAnnotation<GConstructor> annotate(Type type) {
         return annotationMap.computeIfAbsent(type, x -> new GAnnotation<>(this));
+    }
+
+    public void putPostCompileTask(Runnable postTask) {
+        compileTask.add(postTask);
+    }
+
+    @Override
+    public void putPreCompileTask(Runnable task) {
+        compileTask.add(0, task);
+    }
+
+    @Override
+    public void executeCompileTask() {
+        compileTask.forEach(Runnable::run);
+        compileTask.clear();
     }
 
     protected Map<Type, GAnnotation<GConstructor>> getAnnotationMap() {
@@ -48,13 +58,13 @@ public class GConstructor extends AbstractConstructor implements GMember {
     }
     
     public GConstructor parameters(Type... types) {
-        return _parameters(Arrays.stream(types).map(x -> new PField(IClass.fromClass(x))).toArray(PField[]::new));
+        return _parameters(Arrays.stream(types).map(x -> new PField(IClass.fromClass(x), this)).toArray(PField[]::new));
     }
 
     private GConstructor _parameters(PField... parameters) {
         this.parameters = parameters;
         for (int i = 0; i < parameters.length; i++) {
-            parameters[i].localIndex = i + 1;
+            parameters[i].localIndex = i;
         }
         return this;
     }
@@ -104,8 +114,8 @@ public class GConstructor extends AbstractConstructor implements GMember {
         Code code = Code.getCode();
         MethodVisitor visitor = code.getCodeVisitor();
         visitor.visitVarInsn(Opcodes.ALOAD, 0);
-        for (Object arg : args) {
-            Reference.handleWrite(arg);
+        for (int i = 0; i < args.length; i++) {
+            Reference.handleWrite(parameters[i].getType(), args[i]);
         }
         visitor.visitMethodInsn(Opcodes.INVOKESPECIAL, getDeclaringClass().getRawName(), "<init>", "()V", false);
     }

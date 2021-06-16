@@ -1,18 +1,19 @@
 package thito.reflectedbytecode;
 
-import org.objectweb.asm.Label;
-import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.*;
+import thito.reflectedbytecode.jvm.*;
 
-import java.lang.ref.WeakReference;
-import java.lang.reflect.Modifier;
-import java.util.HashMap;
-import java.util.Map;
+import java.lang.ref.*;
+import java.util.*;
 
 public class Code implements AutoCloseable {
     private static final ThreadLocal<WeakReference<Code>> currentCode = new ThreadLocal<>();
 
-    static Code pushCode(int modifiers, MethodVisitor visitor) {
-        return pushCode(new Code(modifiers, visitor));
+    static Code pushCode(int modifiers, MethodVisitor visitor, GMethod method) {
+        return pushCode(new Code(modifiers, visitor, method));
+    }
+    static Code pushCode(int modifiers, MethodVisitor visitor, GConstructor constructor) {
+        return pushCode(new Code(modifiers, visitor, constructor));
     }
     static Code pushCode(Code code) {
         currentCode.set(new WeakReference<>(code));
@@ -26,16 +27,38 @@ public class Code implements AutoCloseable {
         return c;
     }
 
+    private IClass returnType;
     private MethodVisitor visitor;
     private int modifiers;
-    private int localIndex;
     private int labelIndex;
     private boolean markReturn, markSuperConstructor;
     private Map<Object, Label> labelMap = new HashMap<>();
+    private LocalFieldMap localFieldMap;
 
-    Code(int modifiers, MethodVisitor visitor) {
+    Code(int modifiers, MethodVisitor visitor, GMethod method) {
+        localFieldMap = new LocalFieldMap(method);
         this.modifiers = modifiers;
         this.visitor = visitor;
+        this.returnType = method.getReturnType();
+    }
+
+    Code(int modifiers, MethodVisitor visitor, GConstructor method) {
+        localFieldMap = new LocalFieldMap(method);
+        this.modifiers = modifiers;
+        this.visitor = visitor;
+        this.returnType = Java.Class(void.class);
+    }
+
+    public boolean isReturnVoid() {
+        return returnType == null || returnType.getDescriptor().equals("V");
+    }
+
+    public IClass getReturnType() {
+        return returnType;
+    }
+
+    public LocalFieldMap getLocalFieldMap() {
+        return localFieldMap;
     }
 
     public MethodVisitor getCodeVisitor() {
@@ -46,9 +69,6 @@ public class Code implements AutoCloseable {
         return modifiers;
     }
 
-    public int requestLocalIndex() {
-        return Modifier.isStatic(modifiers) ? localIndex++ : localIndex++ + 1;
-    }
 
     public boolean isMarkedReturn() {
         return markReturn;
@@ -66,10 +86,6 @@ public class Code implements AutoCloseable {
         markReturn = true;
     }
 
-    public void skipLocalIndex(int amount) {
-        localIndex += amount;
-    }
-
     public Label getLabel(String name) {
         return labelMap.computeIfAbsent(name, x -> new Label());
     }
@@ -79,7 +95,7 @@ public class Code implements AutoCloseable {
     }
 
     public void close() {
-        visitor.visitMaxs(-1, -1);
+        visitor.visitMaxs(1, 1);
         visitor.visitEnd();
         WeakReference<Code> current = currentCode.get();
         if (current != null) {
