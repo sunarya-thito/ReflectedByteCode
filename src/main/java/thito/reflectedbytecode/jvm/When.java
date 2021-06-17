@@ -30,10 +30,10 @@ public class When {
         return jump(Opcodes.IFNE);
     }
     public Condition isNull() {
-        return jump(Opcodes.IFNULL);
+        return jump(Opcodes.IFNONNULL);
     }
     public Condition isNotNull() {
-        return jump(Opcodes.IFNONNULL);
+        return jump(Opcodes.IFNULL);
     }
     // this is so fking weird
     // everything is reversed
