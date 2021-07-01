@@ -21,8 +21,8 @@ public interface Java {
         return new Reference(type) {
             @Override
             protected void write() {
-                Code.getCode().getCodeVisitor().visitTypeInsn(Opcodes.CHECKCAST, ASMHelper.ToASMType(type).getInternalName());
                 object.write(Object.class);
+                Code.getCode().getCodeVisitor().visitTypeInsn(Opcodes.CHECKCAST, ASMHelper.ToASMType(type).getInternalName());
             }
         };
     }

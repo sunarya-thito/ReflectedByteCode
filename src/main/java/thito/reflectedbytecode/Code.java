@@ -1,6 +1,8 @@
 package thito.reflectedbytecode;
 
 import org.objectweb.asm.*;
+import org.objectweb.asm.commons.*;
+import org.objectweb.asm.tree.*;
 import thito.reflectedbytecode.jvm.*;
 
 import java.lang.ref.*;
@@ -95,7 +97,9 @@ public class Code implements AutoCloseable {
     }
 
     public void close() {
-        visitor.visitMaxs(1, 1);
+        JavaValidatorHelper helper = (JavaValidatorHelper) visitor;
+        helper.compile();
+        visitor.visitMaxs(Short.MAX_VALUE, Short.MAX_VALUE);
         visitor.visitEnd();
         WeakReference<Code> current = currentCode.get();
         if (current != null) {

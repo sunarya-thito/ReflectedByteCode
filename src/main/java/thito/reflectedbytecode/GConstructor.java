@@ -19,7 +19,6 @@ public class GConstructor extends AbstractConstructor implements GMember, BodyOw
     private Body<GConstructorAccessor> body;
     private Type[] Throws;
     private Map<Type, GAnnotation<GConstructor>> annotationMap = new HashMap<>();
-    private List<Runnable> compileTask = new ArrayList<>();
 
     GConstructor(GClass declaringClass) {
         this.declaringClass = declaringClass;
@@ -27,21 +26,6 @@ public class GConstructor extends AbstractConstructor implements GMember, BodyOw
 
     public GAnnotation<GConstructor> annotate(Type type) {
         return annotationMap.computeIfAbsent(type, x -> new GAnnotation<>(this));
-    }
-
-    public void putPostCompileTask(Runnable postTask) {
-        compileTask.add(postTask);
-    }
-
-    @Override
-    public void putPreCompileTask(Runnable task) {
-        compileTask.add(0, task);
-    }
-
-    @Override
-    public void executeCompileTask() {
-        compileTask.forEach(Runnable::run);
-        compileTask.clear();
     }
 
     protected Map<Type, GAnnotation<GConstructor>> getAnnotationMap() {

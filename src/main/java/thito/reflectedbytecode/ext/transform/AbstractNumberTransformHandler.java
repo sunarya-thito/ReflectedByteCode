@@ -75,8 +75,11 @@ public abstract class AbstractNumberTransformHandler extends ObjectTransformHand
             } else if (isPrimitiveNumber) {
                 setValue(cast(getValue()));
             } else if (Number.class.isAssignableFrom(source)) {
+                System.out.println("casting source");
                 setValue(Java.Class(Number.class).getMethod(primitiveMethodName).get()
                         .invoke(getValue()));
+            } else {
+                System.out.println("from: "+source+" to "+target);
             }
         }
     }

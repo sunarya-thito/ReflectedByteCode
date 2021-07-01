@@ -40,8 +40,15 @@ public abstract class ObjectTransformHandler {
         handlers.remove(target, handler);
     }
 
+    private static boolean isByteCodeAssignable(Class<?> from, Class<?> to) {
+        if (from == int.class || from == short.class || from == char.class || from == byte.class || from == boolean.class) {
+            return to == int.class || to == short.class || to == char.class || to == byte.class || to == boolean.class;
+        }
+        return false;
+    }
+
     public static Reference handleCasting(Class<?> from, Class<?> to) {
-        if (from == null || to == null || from == to || to.isAssignableFrom(from)) return null;
+        if (from == null || to == null || from == to || to.isAssignableFrom(from) || isByteCodeAssignable(from, to)) return null;
         ObjectTransformHandler handler = handlers.getOrDefault(to, unknownTransformHandler);
         handler.store(from, to);
         if (!handler.canHandle()) {

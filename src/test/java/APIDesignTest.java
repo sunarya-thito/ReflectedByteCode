@@ -8,16 +8,11 @@ import java.util.*;
 public class APIDesignTest extends HashMap<String, Integer> {
 
     public static void main(String[] args) throws Throwable {
-        System.out.println(Modifier.toString(25));
         try (Context context = Context.open()) {
             GClass exampleClass = context.createClass("a");
             exampleClass.declareMethod("main").modifier().makeStatic().makePublic().done().parameters(String[].class).body(instance -> {
-                Java.Class(System.class).staticField("out").method("println", Object.class)
-                        .invokeVoid("test2334124");
-                Java.Class(System.class).staticField("out").method("println", Object.class)
-                        .invokeVoid(Java.NewArray(Object.class, 2).arrayInitialValues("test", "test2"));
-                Java.Class(System.class).staticField("out").method("println", Object.class)
-                        .invokeVoid("test233");
+                Java.Class(System.class).staticField("out").method("println", boolean.class)
+                        .invokeVoid(10);
             }).exceptionThrows(Throwable.class).annotate(Deprecated.class);
             byte[] bytes = context.writeClass(exampleClass);
             new FileOutputStream("D:/test.class").write(bytes);

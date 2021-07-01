@@ -1,28 +1,57 @@
 package thito.reflectedbytecode.jvm;
 
 import org.objectweb.asm.*;
-import org.objectweb.asm.Type;
-import org.objectweb.asm.commons.*;
+import org.objectweb.asm.tree.*;
 import thito.reflectedbytecode.*;
 import thito.reflectedbytecode.debug.*;
 
-import java.lang.reflect.*;
 import java.util.*;
 
 public class JavaValidatorHelper extends MethodVisitor {
 
+    private List<TryCatchBlockNode> tryCatches = new ArrayList<>();
+    private List<LocalVariableNode> localVariableNodes = new ArrayList<>();
+    private List<AbstractInsnNode> nodes = new ArrayList<>();
     private BodyOwner method;
     private MethodVisitor mv;
     private boolean wasThrowing;
+    private String descriptor;
     public JavaValidatorHelper(int api, int access, String descriptor, MethodVisitor methodVisitor, BodyOwner method) {
-        super(api, new MethodVisitorDebug(api, methodVisitor));
+        super(api, methodVisitor = new MethodVisitorDebug(api, methodVisitor));
 //        super(api, methodVisitor);
+        this.descriptor = descriptor;
         this.method = method;
         this.mv = methodVisitor;
     }
 
-    public void disableCompileDelay() {
-        method = null;
+    public void compile() {
+        System.out.println("> "+descriptor);
+        MethodVisitor methodVisitor = getMethodVisitor();
+        for (TryCatchBlockNode node : getTryCatches()) {
+            node.accept(methodVisitor);
+        }
+        for (AbstractInsnNode node : getNodes()) {
+            node.accept(methodVisitor);
+        }
+    }
+    public BodyOwner getMethod() {
+        return method;
+    }
+
+    public MethodVisitor getMethodVisitor() {
+        return mv;
+    }
+
+    public List<TryCatchBlockNode> getTryCatches() {
+        return tryCatches;
+    }
+
+    public List<LocalVariableNode> getLocalVariableNodes() {
+        return localVariableNodes;
+    }
+
+    public List<AbstractInsnNode> getNodes() {
+        return nodes;
     }
 
     public boolean wasThrowing() {
@@ -31,9 +60,6 @@ public class JavaValidatorHelper extends MethodVisitor {
 
     public void preCheck() {
         wasThrowing = false;
-//        ValidatorState state = getState();
-//        if (state.freezeChecking) return;
-//        state.shutdown();
     }
 
     @Override
@@ -86,151 +112,71 @@ public class JavaValidatorHelper extends MethodVisitor {
 
     @Override
     public void visitFrame(int type, int numLocal, Object[] local, int numStack, Object[] stack) {
-        if (method != null) {
-            method.putPostCompileTask(() -> {
-                preCheck();
-                super.visitFrame(type, numLocal, local, numStack, stack);
-            });
-            return;
-        }
         preCheck();
-        super.visitFrame(type, numLocal, local, numStack, stack);
+        nodes.add(new FrameNode(type, numLocal, local, numStack, stack));
     }
 
     @Override
     public void visitInsn(int opcode) {
-        if (method != null) {
-            method.putPostCompileTask(() -> {
-                preCheck();
-                if (opcode == Opcodes.ATHROW) {
-                    wasThrowing = true;
-                }
-                super.visitInsn(opcode);
-            });
-            return;
-        }
         preCheck();
+        nodes.add(new InsnNode(opcode));
         if (opcode == Opcodes.ATHROW) {
             wasThrowing = true;
         }
-        super.visitInsn(opcode);
     }
 
     @Override
     public void visitIntInsn(int opcode, int operand) {
-        if (method != null) {
-            method.putPostCompileTask(() -> {
-                preCheck();
-                super.visitIntInsn(opcode, operand);
-            });
-            return;
-        }
         preCheck();
-        super.visitIntInsn(opcode, operand);
+        nodes.add(new IntInsnNode(opcode, operand));
     }
 
     @Override
     public void visitVarInsn(int opcode, int var) {
-        if (method != null) {
-            method.putPostCompileTask(() -> {
-                preCheck();
-                super.visitVarInsn(opcode, var);
-            });
-            return;
-        }
         preCheck();
-        super.visitVarInsn(opcode, var);
+        nodes.add(new VarInsnNode(opcode, var));
     }
 
     @Override
     public void visitTypeInsn(int opcode, String type) {
-        if (method != null) {
-            method.putPostCompileTask(() -> {
-                preCheck();
-                super.visitTypeInsn(opcode, type);
-            });
-            return;
-        }
         preCheck();
-        super.visitTypeInsn(opcode, type);
+        nodes.add(new TypeInsnNode(opcode, type));
     }
 
     @Override
     public void visitFieldInsn(int opcode, String owner, String name, String descriptor) {
-        if (method != null) {
-            method.putPostCompileTask(() -> {
-                preCheck();
-                super.visitFieldInsn(opcode, owner, name, descriptor);
-            });
-            return;
-        }
         preCheck();
-        super.visitFieldInsn(opcode, owner, name, descriptor);
+        nodes.add(new FieldInsnNode(opcode, owner, name, descriptor));
     }
 
     @Override
     public void visitMethodInsn(int opcode, String owner, String name, String descriptor) {
-        if (method != null) {
-            method.putPostCompileTask(() -> {
-                preCheck();
-                super.visitMethodInsn(opcode, owner, name, descriptor);
-            });
-            return;
-        }
         preCheck();
-        super.visitMethodInsn(opcode, owner, name, descriptor);
+        nodes.add(new MethodInsnNode(opcode, owner, name, descriptor));
     }
 
     @Override
     public void visitMethodInsn(int opcode, String owner, String name, String descriptor, boolean isInterface) {
-        if (method != null) {
-            method.putPostCompileTask(() -> {
-                preCheck();
-                super.visitMethodInsn(opcode, owner, name, descriptor, isInterface);
-            });
-            return;
-        }
         preCheck();
-        super.visitMethodInsn(opcode, owner, name, descriptor, isInterface);
+        nodes.add(new MethodInsnNode(opcode, owner, name, descriptor, isInterface));
     }
 
     @Override
     public void visitInvokeDynamicInsn(String name, String descriptor, Handle bootstrapMethodHandle, Object... bootstrapMethodArguments) {
-        if (method != null) {
-            method.putPostCompileTask(() -> {
-                preCheck();
-                super.visitInvokeDynamicInsn(name, descriptor, bootstrapMethodHandle, bootstrapMethodArguments);
-            });
-            return;
-        }
         preCheck();
-        super.visitInvokeDynamicInsn(name, descriptor, bootstrapMethodHandle, bootstrapMethodArguments);
+        nodes.add(new InvokeDynamicInsnNode(name, descriptor, bootstrapMethodHandle, bootstrapMethodArguments));
     }
 
     @Override
     public void visitJumpInsn(int opcode, Label label) {
-        if (method != null) {
-            method.putPostCompileTask(() -> {
-                preCheck();
-                super.visitJumpInsn(opcode, label);
-            });
-            return;
-        }
         preCheck();
-        super.visitJumpInsn(opcode, label);
+        nodes.add(new JumpInsnNode(opcode, new LabelNode(label)));
     }
 
     @Override
     public void visitLabel(Label label) {
-        if (method != null) {
-            method.putPostCompileTask(() -> {
-                preCheck();
-                super.visitLabel(label);
-            });
-            return;
-        }
         preCheck();
-        super.visitLabel(label);
+        nodes.add(new LabelNode(label));
     }
 
     @Override
@@ -241,67 +187,32 @@ public class JavaValidatorHelper extends MethodVisitor {
         value instanceof String)) {
             throw new IllegalStateException(""+value);
         }
-        if (method != null) {
-            method.putPostCompileTask(() -> {
-                preCheck();
-                super.visitLdcInsn(value);
-            });
-            return;
-        }
         preCheck();
-        super.visitLdcInsn(value);
+        nodes.add(new LdcInsnNode(value));
     }
 
     @Override
     public void visitIincInsn(int var, int increment) {
-        if (method != null) {
-            method.putPostCompileTask(() -> {
-                preCheck();
-                super.visitIincInsn(var, increment);
-            });
-            return;
-        }
         preCheck();
-        super.visitIincInsn(var, increment);
+        nodes.add(new IincInsnNode(var, increment));
     }
 
     @Override
     public void visitTableSwitchInsn(int min, int max, Label dflt, Label... labels) {
-        if (method != null) {
-            method.putPostCompileTask(() -> {
-                preCheck();
-                super.visitTableSwitchInsn(min, max, dflt, labels);
-            });
-            return;
-        }
         preCheck();
-        super.visitTableSwitchInsn(min, max, dflt, labels);
+        nodes.add(new TableSwitchInsnNode(min, max ,new LabelNode(dflt), Arrays.stream(labels).map(LabelNode::new).toArray(LabelNode[]::new)));
     }
 
     @Override
     public void visitLookupSwitchInsn(Label dflt, int[] keys, Label[] labels) {
-        if (method != null) {
-            method.putPostCompileTask(() -> {
-                preCheck();
-                super.visitLookupSwitchInsn(dflt, keys, labels);
-            });
-            return;
-        }
         preCheck();
-        super.visitLookupSwitchInsn(dflt, keys, labels);
+        nodes.add(new LookupSwitchInsnNode(new LabelNode(dflt), keys, Arrays.stream(labels).map(LabelNode::new).toArray(LabelNode[]::new)));
     }
 
     @Override
     public void visitMultiANewArrayInsn(String descriptor, int numDimensions) {
-        if (method != null) {
-            method.putPostCompileTask(() -> {
-                preCheck();
-                super.visitMultiANewArrayInsn(descriptor, numDimensions);
-            });
-            return;
-        }
         preCheck();
-        super.visitMultiANewArrayInsn(descriptor, numDimensions);
+        nodes.add(new MultiANewArrayInsnNode(descriptor, numDimensions));
     }
 
     @Override
@@ -312,15 +223,8 @@ public class JavaValidatorHelper extends MethodVisitor {
 
     @Override
     public void visitTryCatchBlock(Label start, Label end, Label handler, String type) {
-        if (method != null) {
-            method.putPreCompileTask(() -> {
-                preCheck();
-                super.visitTryCatchBlock(start, end, handler, type);
-            });
-            return;
-        }
         preCheck();
-        super.visitTryCatchBlock(start, end, handler, type);
+        tryCatches.add(new TryCatchBlockNode(new LabelNode(start), new LabelNode(end), new LabelNode(handler), type));
     }
 
     @Override
@@ -332,7 +236,7 @@ public class JavaValidatorHelper extends MethodVisitor {
     @Override
     public void visitLocalVariable(String name, String descriptor, String signature, Label start, Label end, int index) {
         preCheck();
-        super.visitLocalVariable(name, descriptor, signature, start, end, index);
+        localVariableNodes.add(new LocalVariableNode(name, descriptor, signature, new LabelNode(start), new LabelNode(end), index));
     }
 
     @Override
@@ -344,7 +248,7 @@ public class JavaValidatorHelper extends MethodVisitor {
     @Override
     public void visitLineNumber(int line, Label start) {
         preCheck();
-        super.visitLineNumber(line, start);
+        nodes.add(new LineNumberNode(line, new LabelNode(start)));
     }
 
     @Override

@@ -3,6 +3,10 @@ package thito.reflectedbytecode;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
+import java.lang.reflect.*;
+import java.util.*;
+import java.util.stream.*;
+
 public abstract class AbstractConstructor implements IConstructor {
 
     protected String getMethodDescriptor() {
@@ -73,4 +77,10 @@ public abstract class AbstractConstructor implements IConstructor {
     public String getName() {
         return "<init>";
     }
+
+    @Override
+    public String toString() {
+        return Modifier.toString(getModifiers())+" "+getName()+"("+ Arrays.stream(getParameterTypes()).map(IClass::getName).collect(Collectors.joining(", "))+")void";
+    }
+
 }

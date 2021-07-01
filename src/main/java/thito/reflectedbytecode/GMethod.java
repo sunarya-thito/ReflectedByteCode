@@ -1,6 +1,7 @@
 package thito.reflectedbytecode;
 
 import org.objectweb.asm.*;
+import thito.reflectedbytecode.jvm.*;
 
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
@@ -36,21 +37,6 @@ public class GMethod extends AbstractMethod implements GMember, BodyOwner {
         return annotationMap;
     }
 
-    @Override
-    public void putPreCompileTask(Runnable task) {
-        compileTask.add(0, task);
-    }
-
-    public void putPostCompileTask(Runnable postTask) {
-        compileTask.add(postTask);
-    }
-
-    @Override
-    public void executeCompileTask() {
-        compileTask.forEach(Runnable::run);
-        compileTask.clear();
-    }
-
     public GMethod exceptionThrows(Type...exceptions) {
         Throws = exceptions;
         return this;
@@ -75,7 +61,7 @@ public class GMethod extends AbstractMethod implements GMember, BodyOwner {
     }
 
     public GMethod parameters(Type... types) {
-        return _parameters(Arrays.stream(types).map(x -> new PField(IClass.fromClass(x), this)).toArray(PField[]::new));
+        return _parameters(Arrays.stream(types).map(x -> new PField(Java.Class(x), this)).toArray(PField[]::new));
     }
 
     private GMethod _parameters(PField... parameters) {

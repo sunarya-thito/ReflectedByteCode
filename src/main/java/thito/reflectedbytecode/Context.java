@@ -109,12 +109,6 @@ public class Context implements AutoCloseable {
                     // constructors are void-type, always RETURN
                     code.getCodeVisitor().visitInsn(Opcodes.RETURN);
                 }
-                ((JavaValidatorHelper) code.getCodeVisitor()).disableCompileDelay();
-                try {
-                    ((GConstructor) constructor).executeCompileTask();
-                } catch (Throwable t) {
-                    new IllegalStateException("failed to compile constructor: "+constructor.getDeclaringClass().getName()+"#"+constructor.getName(), t).printStackTrace();
-                }
             }
         }
 
@@ -122,27 +116,31 @@ public class Context implements AutoCloseable {
         if (constructors.length == 0) {
             if (clazz.getSuperClass() != null) {
                 IConstructor constructor = clazz.getSuperClass().getDeclaredConstructor().get();
-                MethodVisitor defaultConstructorVisitor = wrap(Modifier.PUBLIC, "()V",classVisitor.visitMethod(Modifier.PUBLIC, "<init>", "()V", null,
+                JavaValidatorHelper defaultConstructorVisitor = wrap(Modifier.PUBLIC, "()V",classVisitor.visitMethod(Modifier.PUBLIC, "<init>", "()V", null,
                         Arrays.stream(constructor.getThrows()).map(TypeHelper::getInternalName).toArray(String[]::new)), null);
                 defaultConstructorVisitor.visitCode();
                 defaultConstructorVisitor.visitVarInsn(Opcodes.ALOAD, 0);
                 defaultConstructorVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL,
                         constructor.getDeclaringClass().getRawName(), "<init>", "()V", false);
                 defaultConstructorVisitor.visitInsn(Opcodes.RETURN);
+                defaultConstructorVisitor.compile();
                 defaultConstructorVisitor.visitMaxs(1, 1);
+                defaultConstructorVisitor.visitEnd();
             } else {
-                MethodVisitor defaultConstructorVisitor = wrap(Modifier.PUBLIC, "()V", classVisitor.visitMethod(Modifier.PUBLIC, "<init>", "()V", null, null), null);
+                JavaValidatorHelper defaultConstructorVisitor = wrap(Modifier.PUBLIC, "()V", classVisitor.visitMethod(Modifier.PUBLIC, "<init>", "()V", null, null), null);
                 defaultConstructorVisitor.visitCode();
                 defaultConstructorVisitor.visitVarInsn(Opcodes.ALOAD, 0);
                 defaultConstructorVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(Object.class), "<init>", "()V", false);
                 defaultConstructorVisitor.visitInsn(Opcodes.RETURN);
+                defaultConstructorVisitor.compile();
                 defaultConstructorVisitor.visitMaxs(1, 1);
+                defaultConstructorVisitor.visitEnd();
             }
         }
 
         // WRITE METHODS
         for (IMethod method : clazz.getDeclaredMethods()) {
-            MethodVisitor methodVisitor = wrap(method.getModifiers(), ((GMethod) method).getMethodDescriptor(),
+            JavaValidatorHelper methodVisitor = wrap(method.getModifiers(), ((GMethod) method).getMethodDescriptor(),
                     classVisitor.visitMethod(method.getModifiers(), method.getName(), ((GMethod) method).getMethodDescriptor(), null,
                             Arrays.stream(method.getThrows()).map(TypeHelper::getInternalName).toArray(String[]::new)),
                     (GMethod) method
@@ -172,12 +170,6 @@ public class Context implements AutoCloseable {
                         } else {
                             throw new IllegalStateException("unreturned non-void method");
                         }
-                    }
-                    ((JavaValidatorHelper) code.getCodeVisitor()).disableCompileDelay();
-                    try {
-                        ((GMethod) method).executeCompileTask();
-                    } catch (Throwable t) {
-                        new IllegalStateException("failed to compile method "+method.getDeclaringClass().getName()+"#"+method.getName(), t).printStackTrace();
                     }
                 }
             }
